@@ -7,13 +7,9 @@
 <style>
 :root{
   --azul:#2B4C8C;--azul-osc:#1B3366;--celeste:#5BB5EA;--ambar:#EDB125;
-  --bg:#EEF2F8;--panel:#fff;--panel2:#F6F8FC;--texto:#17233b;--suave:#66748f;--borde:#dfe5f0;
-  --ok:#16a34a;--ok-bg:#dcf5e5;--mal:#dc2f2f;--mal-bg:#fde3e3;--aviso:#b7791f;--aviso-bg:#fdf1cf;--info:#2563eb;--info-bg:#dfeafd;
-  --sombra:0 1px 2px rgba(20,40,90,.06),0 6px 20px rgba(20,40,90,.07);--radio:14px;--side:244px
-}
-:root[data-theme=dark]{
-  --bg:#0e1626;--panel:#16213a;--panel2:#1b2846;--texto:#e6ecf8;--suave:#95a3c0;--borde:#2a3a5e;
-  --ok-bg:#12351f;--mal-bg:#431a1d;--aviso-bg:#40310f;--info-bg:#15294f;--sombra:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.3)
+  --bg:#F5F7FA;--panel:#fff;--panel2:#F3F5F9;--texto:#1f2937;--suave:#6b7686;--borde:#e3e8ef;
+  --ok:#15803d;--ok-bg:#e6f6ec;--mal:#c62828;--mal-bg:#fdecec;--aviso:#a16207;--aviso-bg:#fef6dc;--info:#1d4ed8;--info-bg:#e8effd;
+  --sombra:0 1px 2px rgba(16,24,40,.05);--radio:10px;--side:236px
 }
 *{box-sizing:border-box}
 html,body{margin:0}
@@ -21,35 +17,43 @@ body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-seri
 svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
 /* ---------- estructura ---------- */
 #shell{display:grid;grid-template-columns:var(--side) 1fr;min-height:100vh}
-aside{background:linear-gradient(180deg,var(--azul-osc),var(--azul));color:#dce7ff;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:16px 12px;z-index:30}
+aside{background:#fff;border-right:1px solid var(--borde);color:var(--texto);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:16px 12px;z-index:30}
 .marca{display:flex;align-items:center;gap:10px;padding:4px 6px 16px}
-.marca img{height:34px;background:#fff;border-radius:8px;padding:3px 8px}
-.marca b{font-size:13px;letter-spacing:.4px;color:#fff;line-height:1.1}
-.marca small{display:block;font-weight:400;color:#9db5e6;font-size:11px}
+.marca img{height:34px}
+.marca b{font-size:13px;letter-spacing:.4px;color:var(--azul-osc);line-height:1.1}
+.marca small{display:block;font-weight:400;color:var(--suave);font-size:11px}
 .nav{display:flex;flex-direction:column;gap:3px;margin-top:6px}
-.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:#cfdcf7;transition:.15s;position:relative}
-.nav button:hover{background:rgba(255,255,255,.1);color:#fff}
-.nav button.act{background:var(--ambar);color:#1c2433;font-weight:650;box-shadow:0 4px 14px rgba(237,177,37,.35)}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:#46546b;transition:.15s;position:relative}
+.nav button:hover{background:var(--panel2);color:var(--azul-osc)}
+.nav button.act{background:var(--info-bg);color:var(--azul);font-weight:650}
 .nav .cuenta{margin-left:auto;background:var(--mal);color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;font-weight:700}
-.lado-pie{margin-top:auto;font-size:12px;color:#9db5e6;padding:10px 8px;border-top:1px solid rgba(255,255,255,.12)}
+.lado-pie{margin-top:auto;font-size:12px;color:var(--suave);padding:10px 8px;border-top:1px solid var(--borde)}
 .vivo{display:inline-flex;align-items:center;gap:6px}
-.vivo i{width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.7);animation:pulso 1.8s infinite}
-.vivo.caido i{background:#ff6b6b;animation:none}
-@keyframes pulso{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+.vivo i{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 0 rgba(34,197,94,.6);animation:pulso 1.8s infinite}
+.vivo.caido i{background:var(--mal);animation:none}
+@keyframes pulso{70%{box-shadow:0 0 0 8px rgba(34,197,94,0)}100%{box-shadow:0 0 0 0 rgba(34,197,94,0)}}
 .principal{min-width:0;display:flex;flex-direction:column}
-.barra-sup{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--borde)}
+.barra-sup{position:sticky;top:0;z-index:20;background:#fff;display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--borde)}
 .barra-sup h1{font-size:19px;margin:0;font-weight:700;color:var(--texto)}
 .buscador{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--borde);border-radius:10px;padding:0 10px;min-width:220px;max-width:340px;flex:1}
 .buscador input{border:0;background:none;outline:0;padding:9px 0;width:100%;color:var(--texto);font:inherit}
 .buscador kbd{font-size:11px;color:var(--suave);border:1px solid var(--borde);border-radius:5px;padding:0 5px}
 .ib{all:unset;cursor:pointer;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--borde);color:var(--texto);position:relative;transition:.15s}
-.ib:hover{border-color:var(--celeste);transform:translateY(-1px)}
+.ib:hover{border-color:var(--celeste)}
 .ib .punto{position:absolute;top:-6px;right:-6px;background:var(--mal);color:#fff;border-radius:10px;font-size:11px;font-weight:700;padding:1px 6px;min-width:19px;text-align:center}
 .ib.campana.tiene{animation:campana 2.4s infinite}
 @keyframes campana{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(14deg)}96%{transform:rotate(-12deg)}}
 .menu-mov{display:none}
 main{padding:22px 24px 60px;max-width:1280px;width:100%;animation:entra .25s ease}
 @keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ---------- indicadores de carga ---------- */
+#carga{position:fixed;top:0;left:0;height:3px;width:0;background:var(--azul);z-index:100;opacity:0;transition:width .4s,opacity .3s}
+#carga.on{opacity:1}
+.btn.cargando{pointer-events:none;opacity:.8}
+.btn .rueda{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gira .7s linear infinite;flex:none}
+@keyframes gira{to{transform:rotate(360deg)}}
+.err{color:var(--mal);font-size:13px;margin-top:8px}
+.periodo-info{background:var(--panel2);border:1px solid var(--borde);border-radius:8px;padding:9px 12px;margin-top:10px;font-size:13.5px}
 /* ---------- componentes ---------- */
 .fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .fila.sep{justify-content:space-between}
@@ -57,15 +61,14 @@ main{padding:22px 24px 60px;max-width:1280px;width:100%;animation:entra .25s eas
 .tarjeta h2,.sec-t{margin:0 0 12px;font-size:15px;font-weight:700}
 .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
 .kpi{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);padding:14px 16px;box-shadow:var(--sombra);display:flex;gap:12px;align-items:center;transition:.2s;cursor:default}
-.kpi.clic{cursor:pointer}.kpi.clic:hover{transform:translateY(-3px);border-color:var(--celeste)}
+.kpi.clic{cursor:pointer}.kpi.clic:hover{border-color:var(--celeste)}
 .kpi .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none}
 .kpi{min-width:0}.kpi .n{font-size:26px;font-weight:750;line-height:1}
 .kpi .l{font-size:12px;color:var(--suave);margin-top:3px}
 .c-azul{background:var(--info-bg);color:var(--info)}.c-ok{background:var(--ok-bg);color:var(--ok)}.c-mal{background:var(--mal-bg);color:var(--mal)}.c-aviso{background:var(--aviso-bg);color:var(--aviso)}
 .btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:10px;background:var(--azul);color:#fff;font-weight:600;font-size:14px;transition:.15s;box-sizing:border-box}
-.btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn:hover{filter:brightness(1.1)}
 .btn.sec{background:var(--panel);color:var(--azul);border:1px solid var(--borde)}
-:root[data-theme=dark] .btn.sec{color:#cfe0ff}
 .btn.ambar{background:var(--ambar);color:#1c2433}.btn.verde{background:var(--ok)}.btn.rojo{background:var(--mal)}
 .btn.chico{padding:5px 10px;font-size:13px;border-radius:8px}
 .btn[disabled],.btn.off{opacity:.45;pointer-events:none}
@@ -93,13 +96,13 @@ tr:last-child td{border-bottom:0}
 .msg.ok{background:var(--ok-bg);color:var(--ok);font-weight:650}.msg.mal{background:var(--mal-bg);color:var(--mal)}.msg.aviso{background:var(--aviso-bg);color:var(--aviso)}.msg.info{background:var(--info-bg);color:var(--info)}
 .peq{font-size:12.5px;color:var(--suave)}
 .progreso{height:9px;background:var(--panel2);border:1px solid var(--borde);border-radius:6px;overflow:hidden}
-.progreso>div{height:100%;background:linear-gradient(90deg,var(--celeste),var(--azul));transition:width .6s}
+.progreso>div{height:100%;background:var(--azul);transition:width .6s}
 .progreso.anim>div{background-size:30px 30px;background-image:linear-gradient(135deg,rgba(255,255,255,.28) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.28) 75%,transparent 75%);animation:rayas 1s linear infinite}
 @keyframes rayas{to{background-position:30px 0}}
 /* clientes en tarjetas */
 .rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
-.cli{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);box-shadow:var(--sombra);padding:16px;display:flex;flex-direction:column;gap:12px;transition:.2s;animation:entra .3s ease both}
-.cli:hover{transform:translateY(-3px);border-color:var(--celeste)}
+.cli{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);box-shadow:var(--sombra);padding:16px;display:flex;flex-direction:column;gap:12px;transition:.15s}
+.cli:hover{border-color:var(--celeste)}
 .cli.mal{border-color:var(--mal)}
 .avatar{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex:none}
 .cli h3{margin:0;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cli .fila>div:nth-child(2){min-width:0;flex:1}.cli .chip{flex:none}.cli .sub{font-size:12.5px;color:var(--suave)}
@@ -124,14 +127,14 @@ tr:last-child td{border-bottom:0}
 .paso.mal .b{background:var(--mal);border-color:var(--mal);color:#fff}
 .paso.hecho,.paso.act,.paso.mal{color:var(--texto);font-weight:600}
 /* modales, cajón y avisos */
-.velo{position:fixed;inset:0;background:rgba(10,18,36,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;z-index:60;animation:vel .18s}
+.velo{position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;z-index:60;animation:vel .18s}
 @keyframes vel{from{opacity:0}}
-.modal{background:var(--panel);border-radius:18px;padding:20px;width:100%;max-width:980px;margin:auto;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:sube .22s cubic-bezier(.2,.9,.3,1)}
+.modal{background:var(--panel);border-radius:14px;padding:20px;width:100%;max-width:980px;margin:auto;box-shadow:0 20px 50px rgba(16,24,40,.25);animation:sube .22s cubic-bezier(.2,.9,.3,1)}
 @keyframes sube{from{opacity:0;transform:translateY(18px) scale(.98)}}
 .modal.chico{max-width:440px}.modal.ancho{max-width:1120px}.f_rmax,.f_rmin{width:72px}.f_placa{width:112px}.modal.medio{max-width:720px}
 .modal h3{margin:0 0 12px;font-size:18px;color:var(--texto)}
 .pie-modal{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
-.cajon{position:fixed;top:0;right:0;height:100vh;width:min(430px,100vw);background:var(--panel);z-index:55;box-shadow:-20px 0 50px rgba(0,0,0,.25);transform:translateX(105%);transition:.28s;display:flex;flex-direction:column}
+.cajon{position:fixed;top:0;right:0;height:100vh;width:min(430px,100vw);background:var(--panel);z-index:55;box-shadow:-10px 0 30px rgba(16,24,40,.15);transform:translateX(105%);transition:.28s;display:flex;flex-direction:column}
 .cajon.abierto{transform:none}
 .cajon header{padding:16px 18px;border-bottom:1px solid var(--borde);display:flex;align-items:center;justify-content:space-between}
 .cajon .cuerpo{padding:14px 16px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:10px}
@@ -140,8 +143,8 @@ tr:last-child td{border-bottom:0}
 .aviso-i b{display:block;margin-bottom:2px}
 .aviso-i .t{font-size:13px;color:var(--suave)}
 #toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:90;max-width:min(380px,92vw)}
-.toast{background:#17233b;color:#fff;padding:11px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;gap:10px;align-items:flex-start;animation:sube .25s;border-left:4px solid var(--celeste)}
-.toast.ok{border-left-color:#3ddc84}.toast.mal{border-left-color:#ff6b6b}
+.toast{background:#fff;color:var(--texto);border:1px solid var(--borde);padding:11px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(16,24,40,.15);display:flex;gap:10px;align-items:flex-start;animation:sube .25s;border-left:4px solid var(--celeste)}
+.toast.ok{border-left-color:var(--ok)}.toast.mal{border-left-color:var(--mal)}
 .esq{background:linear-gradient(100deg,var(--panel2) 30%,var(--borde) 50%,var(--panel2) 70%);background-size:300% 100%;animation:esq 1.2s infinite;border-radius:var(--radio);height:130px}
 @keyframes esq{to{background-position:-150% 0}}
 .vacio{text-align:center;color:var(--suave);padding:40px 10px}
@@ -162,7 +165,7 @@ tr:last-child td{border-bottom:0}
 @media(max-width:900px){
   #shell{grid-template-columns:1fr}
   aside{position:fixed;left:0;top:0;transform:translateX(-105%);transition:.25s;width:var(--side)}
-  aside.abierto{transform:none;box-shadow:20px 0 50px rgba(0,0,0,.4)}
+  aside.abierto{transform:none;box-shadow:10px 0 30px rgba(16,24,40,.2)}
   .menu-mov{display:grid}
   .barra-sup{padding:10px 14px;flex-wrap:wrap}.buscador{order:9;max-width:none;flex-basis:100%;margin-left:0}
   main{padding:16px 14px 60px}
@@ -170,6 +173,7 @@ tr:last-child td{border-bottom:0}
 </style>
 </head>
 <body>
+<div id="carga"></div>
 <div id="shell">
   <aside id="lado">
     <div class="marca"><img src="logo.png" alt="Navisaf" onerror="this.style.display='none'"><b>INFORMES<br>DE FLOTA<small>Navisaf</small></b></div>
@@ -182,7 +186,6 @@ tr:last-child td{border-bottom:0}
       <h1 id="titulo">Clientes</h1>
       <label class="buscador" id="buscador"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Buscar…" autocomplete="off"><kbd>/</kbd></label>
       <button class="ib campana" id="campana" data-act="avisos" title="Avisos"><svg class="i" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8zM10 21h4"/></svg><span class="punto" id="punto" style="display:none">0</span></button>
-      <button class="ib" data-act="tema" title="Modo claro/oscuro"><svg class="i" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
     </div>
     <main id="app"></main>
   </div>
@@ -244,9 +247,25 @@ async function api(accion, datos, clave) {
   if (!j.ok) throw new Error(j.error || 'Error desconocido');
   return j.datos;
 }
-async function ejecutar(fn, okMsg) {
+var botonActivo = null, botonT = 0, pendientes = 0, cargaT = null;
+document.addEventListener('click', function (e) { var b = e.target.closest ? e.target.closest('.btn') : null; if (b) { botonActivo = b; botonT = Date.now(); } }, true);
+function cargaMas(d) {
+  pendientes = Math.max(0, pendientes + d); var c = $('carga'); clearInterval(cargaT);
+  if (pendientes > 0) { c.classList.add('on'); var w = 12; c.style.width = w + '%'; cargaT = setInterval(function () { w += (92 - w) * 0.08; c.style.width = w + '%'; }, 300); }
+  else { c.style.width = '100%'; setTimeout(function () { if (!pendientes) { c.classList.remove('on'); c.style.width = '0'; } }, 250); }
+}
+var TEXTO_CARGA = { u_gua: 'Guardando…', c_ok: 'Guardando…', b_ok: 'Guardando…', r_ok: 'Guardando…', p_ok: 'Guardando…', k_ok: 'Guardando…', e_ok: 'Creando…', o_ok: 'Aceptando…', u_act: 'Consultando MyGeotab…', u_apl: 'Aplicando…', generar: 'Generando vista previa…', enviar: 'Enviando…', reprocesar: 'Programando…', corregir: 'Guardando…', obs: 'Guardando…', guardarDiag: 'Guardando…', actualizar: 'Actualizando…', restaurar: 'Quitando…' };
+async function ejecutar(fn, okMsg, textoCarga) {
+  var b = botonActivo && botonActivo.isConnected && Date.now() - botonT < 900 ? botonActivo : null; botonActivo = null;
+  var html0 = null;
+  if (b) {
+    html0 = b.innerHTML; b.classList.add('cargando');
+    b.innerHTML = '<span class="rueda"></span>' + esc(textoCarga || TEXTO_CARGA[b.id] || TEXTO_CARGA[b.dataset.act] || 'Procesando…');
+  }
+  cargaMas(1);
   try { var r = await fn(); if (okMsg) toast(okMsg, 'ok'); return r; }
   catch (e) { alerta(e.message); return undefined; }
+  finally { cargaMas(-1); if (b && b.isConnected) { b.classList.remove('cargando'); b.innerHTML = html0; } }
 }
 function toast(t, tipo) {
   var d = document.createElement('div'); d.className = 'toast ' + (tipo || ''); d.innerHTML = '<span>' + esc(t) + '</span>';
@@ -263,9 +282,9 @@ function abrirModal(html, tam) {
   $('modales').appendChild(d); pila.push(d); return d;
 }
 function cerrarModal() { var d = pila.pop(); if (d) d.remove(); }
-function pedirClave(titulo) {
+function pedirClave(titulo, aviso) {
   return new Promise(function (res) {
-    var d = abrirModal('<h3>' + esc(titulo) + '</h3><p class="peq" style="margin-top:-6px">Esta acción requiere la contraseña de administrador.</p><label>Contraseña</label><input type="password" id="pwd" style="width:100%" autocomplete="off"><div class="pie-modal"><button class="btn sec" id="pc">Cancelar</button><button class="btn" id="po">Continuar</button></div>', 'chico');
+    var d = abrirModal('<h3>' + esc(titulo) + '</h3><p class="peq" style="margin-top:-6px">Esta acción requiere la contraseña de administrador.</p><label>Contraseña</label><input type="password" id="pwd" style="width:100%" autocomplete="off">' + (aviso ? '<div class="err">' + esc(aviso) + '</div>' : '') + '<div class="pie-modal"><button class="btn sec" id="pc">Cancelar</button><button class="btn" id="po">Continuar</button></div>', 'chico');
     d.dataset.fijo = '1';
     var inp = d.querySelector('#pwd'); inp.focus();
     function fin(v) { cerrarModal(); res(v); }
@@ -273,6 +292,16 @@ function pedirClave(titulo) {
     d.querySelector('#po').onclick = function () { fin(inp.value); };
     inp.onkeydown = function (e) { if (e.key === 'Enter') fin(inp.value); if (e.key === 'Escape') fin(null); };
   });
+}
+
+/* Pide la contraseña y la comprueba con el servidor (reintenta si es incorrecta). Devuelve la clave o null. */
+async function claveVerificada(titulo) {
+  var aviso = '';
+  for (;;) {
+    var c = await pedirClave(titulo, aviso); if (c === null) return null;
+    try { cargaMas(1); await api('clave_verificar', {}, c); cargaMas(-1); return c; }
+    catch (e) { cargaMas(-1); if (/incorrecta/i.test(e.message)) { aviso = 'Contraseña incorrecta. Inténtalo de nuevo.'; continue; } alerta(e.message); return null; }
+  }
 }
 
 /* ---------- navegación ---------- */
@@ -467,7 +496,7 @@ function pintarUnidades(nuevo) {
   m.querySelector('#u_gua').onclick = async function () {
     leerUnidadesPantalla(m);
     var r = await ejecutar(function () { return api('unidades_guardar', { cliente_id: uCtx.id, unidades: uCtx.unidades }, uCtx.clave); }, 'Unidades guardadas. Si hay informes en curso de este cliente, usa «Traer todo de nuevo» para que tomen el cambio.');
-    if (r) { uCtx.unidades = r; pintarUnidades(false); cargarClientes(); }
+    if (r) { uCtx.unidades = r; cerrarModal(); cargarClientes(); }
   };
 }
 function leerUnidadesPantalla(m) {
@@ -522,15 +551,45 @@ function unidadAvanzada(i) {
 }
 
 /* ---------- emisión manual ---------- */
-function emisionManual(clienteId, nombre) {
-  var hoy = new Date(), a = hoy.getFullYear(), mes = hoy.getMonth() + 1;
+var MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+function limaHoy() { var d = new Date(Date.now() - 5 * 3600 * 1000); return { a: d.getUTCFullYear(), m: d.getUTCMonth() + 1, d: d.getUTCDate() }; }
+function periodosCerrados(tipo) {
+  var h = limaHoy(), lista = [], a = h.a, m = h.m;
+  for (var k = 0; k < 14; k++) {
+    var ult = new Date(Date.UTC(a, m, 0)).getUTCDate(), fin = tipo === 'QUINCENAL' ? 15 : ult;
+    var cerrado = (a < h.a) || (a === h.a && (m < h.m || (m === h.m && h.d > fin)));
+    if (cerrado) lista.push({ a: a, m: m, desde: 1, hasta: fin, ult: ult });
+    m--; if (m === 0) { m = 12; a--; }
+  }
+  return lista;
+}
+function textoPeriodo(p) { return '01 al ' + (p.hasta < 10 ? '0' : '') + p.hasta + ' de ' + MESES[p.m - 1] + ' del ' + p.a; }
+async function emisionManual(clienteId, nombre) {
+  var existentes = [];
+  try { existentes = await api('emisiones_listar', { q: '' }); } catch (e) { existentes = []; }
   var h = '<h3>Nueva emisión · ' + esc(nombre) + '</h3><p class="peq">Se extraen y validan los datos; NO se envía sola. Revisa en «Emisiones» y envía con el botón.</p><div class="cols">' +
-    '<div><label>Tipo</label><select id="e_tipo"><option>QUINCENAL</option><option>MENSUAL</option></select></div>' +
-    '<div><label>Año</label><input id="e_a" type="number" value="' + a + '"></div><div><label>Mes (1-12)</label><input id="e_m" type="number" min="1" max="12" value="' + mes + '"></div></div>' +
-    '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="e_ok">Crear</button></div>';
-  var m = abrirModal(h, 'chico');
-  m.querySelector('#e_ok').onclick = async function () {
-    var r = await ejecutar(function () { return api('emision_crear', { cliente_id: clienteId, tipo: m.querySelector('#e_tipo').value, anio: m.querySelector('#e_a').value, mes: m.querySelector('#e_m').value }); });
+    '<div><label>Tipo de informe</label><select id="e_tipo"><option value="MENSUAL">Mensual (mes completo)</option><option value="QUINCENAL">Quincenal (del 1 al 15)</option></select></div>' +
+    '<div><label>Periodo (solo periodos ya cerrados)</label><select id="e_per"></select></div></div><div class="periodo-info" id="e_info"></div>' +
+    '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="e_ok">Crear emisión</button></div>';
+  var m = abrirModal(h, 'medio');
+  var tipoSel = m.querySelector('#e_tipo'), perSel = m.querySelector('#e_per'), info = m.querySelector('#e_info'), ok = m.querySelector('#e_ok');
+  function llenar() {
+    var ps = periodosCerrados(tipoSel.value);
+    perSel.innerHTML = ps.map(function (p, i) { return '<option value="' + i + '">' + esc(textoPeriodo(p)) + '</option>'; }).join('');
+    perSel._ps = ps; mostrar();
+  }
+  function mostrar() {
+    var p = perSel._ps[Number(perSel.value)]; if (!p) { info.textContent = 'No hay periodos cerrados.'; ok.classList.add('off'); return; }
+    ok.classList.remove('off');
+    var desde = p.a + '-' + (p.m < 10 ? '0' : '') + p.m + '-01';
+    var ya = existentes.filter(function (e) { return e.tipo === tipoSel.value && e.periodo_desde === desde && (String(e.cliente).indexOf(nombre) >= 0 || String(nombre).indexOf(e.cliente) >= 0); })[0];
+    info.innerHTML = '<b>Periodo elegido:</b> ' + esc(textoPeriodo(p)) + ' (' + desde + ' → ' + p.a + '-' + (p.m < 10 ? '0' : '') + p.m + '-' + (p.hasta < 10 ? '0' : '') + p.hasta + ')' +
+      (ya ? '<div class="msg aviso" style="margin:8px 0 0">Ya existe una emisión de este periodo (estado ' + esc(ya.estado) + '). Si la creas de nuevo no se duplica: se abre la existente.</div>' : '');
+  }
+  tipoSel.onchange = llenar; perSel.onchange = mostrar; llenar();
+  ok.onclick = async function () {
+    var p = perSel._ps[Number(perSel.value)]; if (!p) return;
+    var r = await ejecutar(function () { return api('emision_crear', { cliente_id: clienteId, tipo: tipoSel.value, anio: p.a, mes: p.m }); });
     if (r) { cerrarModal(); toast(r.mensaje, 'ok'); ir('emisiones'); }
   };
 }
@@ -680,12 +739,17 @@ function formBase(i) {
 async function recargarBases() { var l = await ejecutar(function () { return api('admin_bases_listar', {}, adminClave); }); if (l) { cache.basesAdm = l; renderBases(l); } }
 
 /* =============================== REGLAS =============================== */
-async function vistaReglas() {
+async function vistaReglas(conservarClave) {
+  if (!conservarClave || adminClave === null) {
+    var clave = await claveVerificada('Reglas: contraseña de administrador');
+    if (clave === null) { ir('clientes'); return; }
+    adminClave = clave;
+  }
   $('app').innerHTML = '<div class="esq"></div>';
   var rg = await ejecutar(function () { return api('reglas_listar'); });
   var pf = await ejecutar(function () { return api('perfiles_listar'); });
   var dg = await ejecutar(function () { return api('diagnosticos_listar'); });
-  if (!rg || !pf || !dg) return;
+  if (!rg || !pf || !dg) { adminClave = null; ir('clientes'); return; }
   cache.reglas = rg; cache.perfiles = pf;
   var nombreRegla = {}; rg.reglas.forEach(function (r) { nombreRegla[r.id_regla] = r.nombre; });
   $('app').innerHTML =
@@ -701,8 +765,8 @@ function formRegla(i) {
   var m = abrirModal('<h3>' + (i === undefined ? 'Nueva regla' : 'Editar regla') + '</h3><label>Id de la regla en MyGeotab</label><input style="width:100%" id="r_id" value="' + esc(r.id_regla) + '"' + (i === undefined ? '' : ' disabled') + '><label>Nombre</label><input style="width:100%" id="r_n" value="' + esc(r.nombre) + '"><label>Categoría</label><input style="width:100%" id="r_c" value="' + esc(r.categoria) + '"><label>Rol</label><select id="r_r">' + cache.reglas.roles.map(function (x) { return '<option' + (x === r.rol ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="r_ok">Guardar</button></div>', 'chico');
   m.querySelector('#r_ok').onclick = async function () {
     var g = function (x) { return m.querySelector('#' + x).value; };
-    var o = await ejecutar(function () { return api('regla_guardar', { regla: { id_regla: g('r_id'), nombre: g('r_n'), categoria: g('r_c'), rol: g('r_r') } }); }, 'Guardado');
-    if (o) { cerrarModal(); vistaReglas(); }
+    var o = await ejecutar(function () { return api('regla_guardar', { regla: { id_regla: g('r_id'), nombre: g('r_n'), categoria: g('r_c'), rol: g('r_r') } }, adminClave); }, 'Regla guardada');
+    if (o) { cerrarModal(); vistaReglas(true); }
   };
 }
 function formPerfil(i) {
@@ -715,15 +779,18 @@ function formPerfil(i) {
   m.querySelector('#p_ok').onclick = async function () {
     var o = { perfil: m.querySelector('#p_n').value };
     m.querySelectorAll('select[data-r]').forEach(function (s) { o[s.getAttribute('data-r')] = s.value; });
-    var r = await ejecutar(function () { return api('perfil_guardar', { perfil: o }); }, 'Guardado');
-    if (r) { cerrarModal(); vistaReglas(); }
+    var r = await ejecutar(function () { return api('perfil_guardar', { perfil: o }, adminClave); }, 'Perfil guardado');
+    if (r) { cerrarModal(); vistaReglas(true); }
   };
 }
 
 /* =============================== CONFIGURACIÓN =============================== */
 async function vistaConfig() {
+  var clave = await claveVerificada('Configuración: contraseña de administrador');
+  if (clave === null) { ir('clientes'); return; }
+  adminClave = clave;
   $('app').innerHTML = '<div class="esq"></div>';
-  var c = await ejecutar(function () { return api('config_get'); }); if (!c) return;
+  var c = await ejecutar(function () { return api('config_get'); }); if (!c) { adminClave = null; ir('clientes'); return; }
   $('app').innerHTML = '<div class="tarjeta"><h2>Cortes y horario</h2><div class="cols">' +
     '<div><label>Día del informe QUINCENAL (1 al 15 del mes)</label><input id="k_dq" type="number" min="1" max="28" value="' + esc(c.DIA_QUINCENAL) + '"></div>' +
     '<div><label>Día del informe MENSUAL (mes anterior completo)</label><input id="k_dm" type="number" min="1" max="28" value="' + esc(c.DIA_MENSUAL) + '"></div>' +
@@ -735,10 +802,10 @@ async function vistaConfig() {
     '<div><label>Bandas de velocidad máxima (4 valores)</label><input id="k_bv" value="' + esc(c.BANDAS_VELMAX) + '"></div></div></div>' +
     '<div class="tarjeta"><h2>Correo por defecto</h2><label>Asunto (variables {CLIENTE} {TIPO} {PERIODO})</label><input style="width:100%" id="k_as" value="' + esc(c.ASUNTO) + '">' +
     '<label>Texto del correo</label><textarea id="k_cu">' + esc(c.CUERPO) + '</textarea></div>' +
-    '<button class="btn verde" id="k_ok">Guardar configuración</button>';
+    '<div class="fila"><button class="btn verde" id="k_ok">Guardar configuración</button><span class="peq">Se pidió la contraseña al entrar; si cambias de sección volverá a pedirla.</span></div>';
   $('k_ok').onclick = async function () {
     var g = function (x) { return $(x).value; };
-    await ejecutar(function () { return api('config_set', { config: { DIA_QUINCENAL: g('k_dq'), DIA_MENSUAL: g('k_dm'), HORA_EJECUCION: g('k_h'), REND_MAX: g('k_rx'), REND_MIN: g('k_rn'), BANDAS_EVENTOS: g('k_be'), BANDAS_VELMAX: g('k_bv'), ASUNTO: g('k_as'), CUERPO: g('k_cu') } }); }, 'Configuración guardada');
+    await ejecutar(function () { return api('config_set', { config: { DIA_QUINCENAL: g('k_dq'), DIA_MENSUAL: g('k_dm'), HORA_EJECUCION: g('k_h'), REND_MAX: g('k_rx'), REND_MIN: g('k_rn'), BANDAS_EVENTOS: g('k_be'), BANDAS_VELMAX: g('k_bv'), ASUNTO: g('k_as'), CUERPO: g('k_cu') } }, adminClave); }, 'Configuración guardada');
   };
 }
 
@@ -750,13 +817,13 @@ var G_INST = [
   ['Pega el manifiesto (appsscript.json)', '<ul><li>En el editor, pulsa el engranaje <b>Configuración del proyecto</b>.</li><li>Marca <b>«Mostrar el archivo de manifiesto appsscript.json en el editor»</b>.</li><li>Vuelve a <b>Editor</b>, abre <code>appsscript.json</code>, borra todo su contenido y pega el del archivo <code>appsscript.json</code> que te entregué.</li></ul>'],
   ['Crea un archivo por cada script', '<p>Con el botón <b>+</b> › <b>Script</b> crea un archivo por cada <code>.gs</code> que te entregué. Ponle el <b>mismo nombre sin «.gs»</b> y pega su contenido:</p><ul><li><code>00_comun</code> · <code>01_mygeotab</code> · <code>02_extraccion</code> · <code>03_calculos</code></li><li><code>04_pdf</code> · <code>04b_pdf_slides</code> · <code>05_correo</code> · <code>06_panel_api</code></li><li><code>07_instalador</code> · <code>09_logo</code></li></ul><p>Borra el archivo <code>Código.gs</code> vacío que trae al inicio. Pulsa <b>Guardar</b> (Ctrl+S).</p>'],
   ['Ejecuta la instalación', '<p>En la barra superior elige la función <code>instalarProyecto</code> y pulsa <b>Ejecutar</b>.</p><p>Google pide permisos: <b>Revisar permisos</b> › tu cuenta › <b>Avanzado</b> › <b>Ir al proyecto</b> › <b>Permitir</b>.</p><p>Al terminar, abre el <b>Registro de ejecución</b> (abajo): verás los enlaces del Sheet de control y de la carpeta CLIENTES. Puedes ejecutarla otra vez sin riesgo: no duplica nada.</p>'],
-  ['Cambia tu contraseña de administrador', '<p><b>Configuración del proyecto</b> › <b>Propiedades de la secuencia de comandos</b> › busca <code>ID_ADMINISTRADOR</code>.</p><p>Su <b>valor es la contraseña</b>. Al inicio vale <code>123456789</code>: cámbiala por la tuya. Esa contraseña se pide solo en: Credenciales, Agregar/Editar cliente y Unidades.</p>'],
-  ['Activa el disparador diario', '<p>Elige la función <code>activarTriggers</code> y pulsa <b>Ejecutar</b>. Crea la revisión diaria (6:00 a. m. hora de Lima por defecto; se cambia en Configuración). Si la ejecutas otra vez, no se duplica.</p>'],
+  ['Cambia tu contraseña de administrador', '<p><b>Configuración del proyecto</b> › <b>Propiedades de la secuencia de comandos</b> › busca <code>ID_ADMINISTRADOR</code>.</p><p>Su <b>valor es la contraseña</b>. Al inicio vale <code>123456789</code>: cámbiala por la tuya. Esa contraseña se pide en: Credenciales, Reglas, Configuración, Agregar/Editar cliente y Unidades.</p>'],
   ['Publica la aplicación web', '<ul><li><b>Implementar</b> › <b>Nueva implementación</b> › engranaje › <b>Aplicación web</b>.</li><li><b>Ejecutar como:</b> Yo. <b>Quién tiene acceso:</b> Cualquier persona.</li><li><b>Implementar</b> y copia la URL que termina en <code>/exec</code>.</li></ul><div class="nota">Si tu Google Workspace no deja elegir «Cualquier persona», pídele a tu administrador de Google que lo permita.</div><div class="nota info">Cuando cambies el código más adelante: Implementar › Administrar implementaciones › lápiz › Versión: <b>Nueva versión</b> › Implementar. La URL no cambia.</div>'],
   ['Pega la URL en el panel', '<p>Abre el archivo <code>index.html</code> con el Bloc de notas (o cualquier editor). Cerca del inicio del script busca <code>URL_API</code> y pega tu URL entre las comillas:</p><p><code>var URL_API = \'https://script.google.com/macros/s/....../exec\';</code></p><p>Guarda el archivo.</p>'],
   ['Sube el panel a GitHub', '<ul><li>Crea un repositorio y sube <b>estos archivos juntos</b>: <code>index.html</code>, <code>logo.png</code> y (opcional, solo de referencia) el PDF modelo.</li><li><b>Settings</b> › <b>Pages</b> › Branch <code>main</code> › <b>Save</b>.</li><li>GitHub te da la dirección de tu panel. Ábrela.</li></ul>'],
   ['Registra tu base de MyGeotab', '<p>En el panel: <b>Credenciales</b> › escribe la contraseña de administrador › <b>Nueva base</b>: nombre, servidor (vacío = my.geotab.com), base de datos, usuario y contraseña de MyGeotab.</p><div class="nota">Las credenciales quedan sin cifrar en la hoja BASES del Sheet de control. No compartas ese Sheet.</div>'],
-  ['Haz una prueba completa', '<ul><li><b>Clientes</b> › Nuevo cliente › después <b>Unidades</b> › «Actualizar desde MyGeotab» › activa unidades con perfil y combustible.</li><li>«Nueva emisión» de un periodo <b>ya cerrado</b>.</li><li>Cuando llegue a LISTO: «Generar vista previa» y revisa el PDF con calma.</li></ul><p>Solo cuando el PDF te convenza, deja que corra en automático.</p>']
+  ['Haz una prueba completa', '<ul><li><b>Clientes</b> › Nuevo cliente › después <b>Unidades</b> › «Actualizar desde MyGeotab» › activa unidades con perfil y combustible.</li><li>«Nueva emisión» de un periodo <b>ya cerrado</b>.</li><li>Cuando llegue a LISTO: «Generar vista previa» y revisa el PDF con calma.</li></ul><p>Solo cuando el PDF te convenza, sigue con el último paso.</p>'],
+  ['ÚLTIMO PASO: activa el modo automático', '<p>Hazlo <b>solo después de que la prueba anterior salió bien</b>. Sin este paso el sistema no emite solo: únicamente trabaja cuando tú pulsas algo en el panel (eso es lo que quieres mientras pruebas).</p><p>En Apps Script elige la función <code>activarTriggers</code> y pulsa <b>Ejecutar</b>. Crea la revisión diaria a las 6:00 a. m. hora de Lima (la hora se cambia en Configuración). Desde entonces: el <b>día 16</b> emite el quincenal y el <b>día 1</b> el mensual; si todo está correcto se envía solo, y si algo falla queda RETENIDO y te avisa.</p><div class="nota info">Puedes ejecutarla más de una vez sin que se duplique. Para apagar el modo automático: Apps Script › icono del reloj (Activadores) › elimina el activador de <code>revisarCortesDiario</code>.</div>']
 ];
 var G_USO = [
   ['Crear un cliente', '<p><b>Clientes</b> › «Nuevo cliente» (pide contraseña). Elige la base de MyGeotab, escribe el <b>id del grupo</b>, la <b>razón social</b> (es el nombre del PDF), los correos <b>Para</b> y <b>Cc</b> (separados por coma) y, si quieres, asunto y texto propios. Se crean solas su carpeta y su hoja de datos.</p>'],
@@ -764,13 +831,13 @@ var G_USO = [
   ['Configuración avanzada por unidad', '<p>El botón <b>Avanzado</b> permite, solo para esa unidad, cambiar <b>cualquiera de las 9 reglas</b> (velocidad, aceleración, frenada, giro, 3 rangos de RPM, sobrerrevoluciones, ralentí) y <b>cualquier variable de medición</b> (odómetro, combustible, horas de motor, horas de ralentí, consumo de ralentí): id del diagnóstico y unidad de origen.</p><div class="nota info">Una unidad en INACTIVO deja de traer datos desde la próxima ejecución. Además el sistema revisa MyGeotab y deja fuera sola a las unidades dadas de baja antes del periodo.</div><div class="nota">Si cambias algo y ya hay informes en curso, usa «Traer todo de nuevo» en esos informes.</div>'],
   ['Editar un cliente', '<p>Botón <b>Editar</b> (pide contraseña): correos, asunto, texto, límites de rendimiento, qué informes recibe (quincenal, mensual o ambos) o desactivarlo.</p>'],
   ['Cómo sale solo cada mes', '<p>Cada día a la hora configurada el sistema revisa: el <b>día 16</b> emite el <b>quincenal</b> (1 al 15) y el <b>día 1</b> el <b>mensual</b> del mes anterior.</p><p>Si todo está completo y correcto, <b>se envía solo</b>. Si algo falla o es dudoso queda <b>RETENIDO</b>: no se envía nada al cliente y te llega un correo a tu cuenta.</p>'],
-  ['Emisión manual', '<p>En el cliente: «Nueva emisión» › tipo, año y mes. Se extraen y validan los datos, pero <b>no se envía sola</b>: tú revisas y envías.</p>'],
+  ['Emisión manual', '<p>En el cliente: «Nueva emisión» › tipo y periodo (se listan solo periodos ya cerrados, con sus fechas). Se extraen y validan los datos, pero <b>no se envía sola</b>: tú revisas y envías.</p>'],
   ['Seguir el avance', '<p><b>Emisiones</b> › abre la fila. Verás los 4 pasos (Extracción, Validación, Vista previa, Envío), la barra de avance y, al terminar bien, el mensaje verde <b>«Extracción completa: N de N unidades, N de N métricas»</b>. Si MyGeotab pide esperar, el sistema espera y sigue solo.</p>'],
   ['Corregir lo que salga mal', '<p>Si quedó RETENIDO, lee los problemas. En «Datos» de cada unidad puedes escribir un valor manual (queda marcado en el informe), quitarlo o dejar una observación. Luego «Validar de nuevo».</p><ul><li><b>Reintentar extracción</b>: repite solo lo que falló.</li><li><b>Traer todo de nuevo</b>: repite todo.</li></ul>'],
   ['Vista previa', '<p>Con la extracción completa, «Generar vista previa» crea un PDF <b>borrador</b> (uno por cliente, se reemplaza cada vez). Ábrelo y revísalo.</p>'],
   ['Enviar al cliente', '<p>«Enviar al cliente» solo se activa cuando todo está completo y verde. Envía el correo con el PDF, guarda el PDF final en la carpeta del cliente y vacía los datos de trabajo del periodo.</p><div class="nota info">Un informe enviado muestra un <b>check verde</b> ✔. Un informe ya enviado <b>no se puede enviar dos veces</b>.</div>'],
   ['La campana de avisos', '<p>Arriba a la derecha. Todo lo que necesita tu atención aparece ahí (y como número rojo en el menú): informes retenidos, envíos sin confirmar, envíos que fallaron y cortes que quedaron sin informe.</p>'],
-  ['Revisar lo enviado', '<p><b>Emisiones</b> › buscador por cliente o fecha: ves destinatarios, estado, fecha de envío y el enlace al PDF. <b>Reglas</b> y <b>Configuración</b> (días de corte, hora, umbrales, textos del correo) se cambian sin contraseña.</p>']
+  ['Revisar lo enviado', '<p><b>Emisiones</b> › buscador por cliente o fecha: ves destinatarios, estado, fecha de envío y el enlace al PDF. <b>Reglas</b> y <b>Configuración</b> (días de corte, hora, umbrales, textos del correo) piden la contraseña de administrador al entrar y se pueden editar solo después de ingresarla.</p>']
 ];
 var G_FALLA = [
   ['Quedó RETENIDO (dato dudoso o faltante)', 'Abre la emisión y lee los problemas. Corrige el dato a mano o usa «Traer todo de nuevo». Luego «Validar de nuevo» → «Generar vista previa» → «Enviar al cliente».'],
@@ -782,14 +849,14 @@ var G_FALLA = [
   ['Quiero rehacerlo todo de una vez', '«Reprocesar todo y enviar si queda correcto»: vuelve a consultar MyGeotab, valida y envía solo si todo queda verde. Si algo falla, queda RETENIDO sin enviar.']
 ];
 var G_ESTADOS = [['EN_COLA', 'azul', 'Esperando su turno de extracción.'], ['EXTRAYENDO', 'azul', 'Trayendo datos de MyGeotab.'], ['RETENIDO', 'mal', 'Algo falló o es dudoso. No se envió nada.'], ['LISTO', 'aviso', 'Completo y correcto. Esperando el envío.'], ['ENVIANDO', 'azul', 'El correo está saliendo.'], ['ENVIADO', 'ok', 'Enviado ✔ (no se repite).']];
-var G_ARCHIVOS = [['appsscript.json', 'Manifiesto del proyecto de Apps Script (paso 2).'], ['00_comun.gs … 09_logo.gs (10 archivos)', 'Código del sistema; van en Apps Script (paso 3).'], ['index.html', 'El panel. Va a GitHub (paso 9) con tu URL /exec pegada.'], ['logo.png', 'Logo de Navisaf. Va a GitHub junto al index.html.'], ['MODELO_CAF_LA_VIGA….pdf', 'PDF modelo de referencia. Opcional; no lo usa el panel.']];
+var G_ARCHIVOS = [['appsscript.json', 'Manifiesto del proyecto de Apps Script (paso 2).'], ['00_comun.gs … 09_logo.gs (10 archivos)', 'Código del sistema; van en Apps Script (paso 3).'], ['index.html', 'El panel. Va a GitHub (paso 8) con tu URL /exec pegada.'], ['logo.png', 'Logo de Navisaf. Va a GitHub junto al index.html.'], ['MODELO_CAF_LA_VIGA….pdf', 'PDF modelo de referencia. Opcional; no lo usa el panel.']];
 var hechosMem = {};
 function leerHechos() { var h = {}; try { h = JSON.parse(leerLocal('guiaHechos') || '{}'); } catch (e) { h = {}; } return Object.assign(h, hechosMem); }
 function vistaGuia() {
   var hechos = leerHechos();
   var tabs = [['instalacion', 'Instalación (una sola vez)'], ['uso', 'Uso diario'], ['falla', 'Si algo falla'], ['ref', 'Estados y archivos']];
   var cab = '<div class="fila sep" style="margin-bottom:14px"><div class="filtros">' + tabs.map(function (t) { return '<button data-act="gTab" data-t="' + t[0] + '" class="' + (GUIA_TAB === t[0] ? 'act' : '') + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
-  var sinUrl = (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0) ? '<div class="nota">Este panel todavía no está conectado: falta pegar tu URL <code>/exec</code> (paso 8 de la instalación). La guía funciona igual.</div>' : '';
+  var sinUrl = (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0) ? '<div class="nota">Este panel todavía no está conectado: falta pegar tu URL <code>/exec</code> (paso 7 de la instalación). La guía funciona igual.</div>' : '';
   var cuerpo = '';
   var pasos = function (lista, clave, conChk) {
     var hechosN = lista.filter(function (_, i) { return hechos[clave + i]; }).length;
@@ -800,7 +867,7 @@ function vistaGuia() {
       }).join('');
   };
   if (GUIA_TAB === 'instalacion') cuerpo = sinUrl + '<div class="nota info">Hazlo con la cuenta de Google que enviará los correos. Tiempo aproximado: 30 minutos. Los archivos que necesitas son los que te entregué junto con este panel.</div>' + pasos(G_INST, 'i', true) +
-    '<div class="nota">Nada de esto se probó contra tu Google real; por eso el paso 11 (prueba completa con un periodo cerrado) es obligatorio antes de dejarlo en automático.</div>';
+    '<div class="nota">Nada de esto se probó contra tu Google real; por eso el paso 10 (prueba completa con un periodo cerrado) es obligatorio antes del último paso (modo automático).</div>';
   else if (GUIA_TAB === 'uso') cuerpo = pasos(G_USO, 'u', false);
   else if (GUIA_TAB === 'falla') cuerpo = '<div class="nota info">En cualquier fallo siempre puedes volver a extraer de MyGeotab, validar, ver la vista previa y enviar, desde el detalle de la emisión (pasos 1 al 4).</div>' + G_FALLA.map(function (f) { return '<div class="g-paso"><div class="g-num" style="background:var(--ambar);color:#1c2433">!</div><div><h4>' + esc(f[0]) + '</h4><p>' + esc(f[1]) + '</p></div></div>'; }).join('');
   else cuerpo = '<div class="tarjeta"><h2>Qué significa cada estado</h2>' + G_ESTADOS.map(function (e) { return '<div class="fila" style="margin:8px 0"><span class="chip ' + e[1] + '" style="min-width:104px;justify-content:center">' + e[0] + '</span><span>' + esc(e[2]) + '</span></div>'; }).join('') + '</div>' +
@@ -811,13 +878,11 @@ function vistaGuia() {
 }
 
 /* =============================== ACCIONES (delegación de eventos) =============================== */
-function aplicarTema(t) { document.documentElement.setAttribute('data-theme', t); guardarLocal('tema', t); }
 var ACT = {
   gTab: function (d) { GUIA_TAB = d.t; vistaGuia(); },
   gChk: function (d, b) { var h = leerHechos(); h[d.k] = b.checked; hechosMem[d.k] = b.checked; guardarLocal('guiaHechos', JSON.stringify(h)); vistaGuia(); },
   ir: function (d) { cerrarCajon(); ir(d.s); },
   menu: function () { $('lado').classList.toggle('abierto'); },
-  tema: function () { aplicarTema(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); },
   avisos: function () { var c = $('cajon'); c.classList.toggle('abierto'); if (c.classList.contains('abierto')) { refrescarAvisos().then(pintarAvisos); pintarAvisos(); } },
   cerrar: function () { cerrarModal(); },
   vista: function (d) { vistaTarjetas = d.v === 't'; guardarLocal('vista', vistaTarjetas ? 'tarjetas' : 'tabla'); document.querySelectorAll('#vt button').forEach(function (b) { b.classList.toggle('act', b.dataset.v === d.v); }); pintarClientes(); },
@@ -845,10 +910,10 @@ var ACT = {
   formBase: function (d) { formBase(d.i === undefined ? undefined : Number(d.i)); },
   borrarBase: async function (d) { var b = cache.basesAdm[Number(d.i)]; if (!confirm('¿Eliminar la base «' + b.nombre + '»?')) return; var r = await ejecutar(function () { return api('admin_base_eliminar', { id: b.id }, adminClave); }, 'Eliminada'); if (r) recargarBases(); },
   formRegla: function (d) { formRegla(d.i === undefined ? undefined : Number(d.i)); },
-  borrarRegla: async function (d) { var r = cache.reglas.reglas[Number(d.i)]; if (!confirm('¿Quitar la regla «' + r.nombre + '»?')) return; var o = await ejecutar(function () { return api('regla_eliminar', { id_regla: r.id_regla }); }, 'Quitada'); if (o) vistaReglas(); },
+  borrarRegla: async function (d) { var r = cache.reglas.reglas[Number(d.i)]; if (!confirm('¿Quitar la regla «' + r.nombre + '»?')) return; var o = await ejecutar(function () { return api('regla_eliminar', { id_regla: r.id_regla }, adminClave); }, 'Regla quitada'); if (o) vistaReglas(true); },
   formPerfil: function (d) { formPerfil(d.i === undefined ? undefined : Number(d.i)); },
-  borrarPerfil: async function (d) { var p = cache.perfiles.perfiles[Number(d.i)]; if (!confirm('¿Quitar el perfil «' + p.perfil + '»?')) return; var o = await ejecutar(function () { return api('perfil_eliminar', { perfil: p.perfil }); }, 'Quitado'); if (o) vistaReglas(); },
-  guardarDiag: function (d, b) { var tr = b.closest('tr'); ejecutar(function () { return api('diagnostico_guardar', { diagnostico: { clave: tr.getAttribute('data-k'), id_diagnostico: tr.querySelector('.d_id').value, unidad_origen: tr.querySelector('.d_un').value } }); }, 'Guardado'); }
+  borrarPerfil: async function (d) { var p = cache.perfiles.perfiles[Number(d.i)]; if (!confirm('¿Quitar el perfil «' + p.perfil + '»?')) return; var o = await ejecutar(function () { return api('perfil_eliminar', { perfil: p.perfil }, adminClave); }, 'Perfil quitado'); if (o) vistaReglas(true); },
+  guardarDiag: function (d, b) { var tr = b.closest('tr'); ejecutar(function () { return api('diagnostico_guardar', { diagnostico: { clave: tr.getAttribute('data-k'), id_diagnostico: tr.querySelector('.d_id').value, unidad_origen: tr.querySelector('.d_un').value } }, adminClave); }, 'Diagnóstico guardado'); }
 };
 function cerrarCajon() { $('cajon').classList.remove('abierto'); }
 document.addEventListener('click', function (e) {
@@ -865,7 +930,6 @@ document.addEventListener('keydown', function (e) {
 });
 
 /* ---------- arranque ---------- */
-aplicarTema(leerLocal('tema') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 pintarNav(); ir('clientes'); refrescarAvisos();
 setInterval(refrescarAvisos, 20000);
 </script>
