@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Navisaf · Informes de flota</title>
+<style>
+:root{
+  --azul:#2B4C8C;--azul-osc:#1B3366;--celeste:#5BB5EA;--ambar:#EDB125;
+  --bg:#EEF2F8;--panel:#fff;--panel2:#F6F8FC;--texto:#17233b;--suave:#66748f;--borde:#dfe5f0;
+  --ok:#16a34a;--ok-bg:#dcf5e5;--mal:#dc2f2f;--mal-bg:#fde3e3;--aviso:#b7791f;--aviso-bg:#fdf1cf;--info:#2563eb;--info-bg:#dfeafd;
+  --sombra:0 1px 2px rgba(20,40,90,.06),0 6px 20px rgba(20,40,90,.07);--radio:14px;--side:244px
+}
+:root[data-theme=dark]{
+  --bg:#0e1626;--panel:#16213a;--panel2:#1b2846;--texto:#e6ecf8;--suave:#95a3c0;--borde:#2a3a5e;
+  --ok-bg:#12351f;--mal-bg:#431a1d;--aviso-bg:#40310f;--info-bg:#15294f;--sombra:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.3)
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{font-family:Inter,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:var(--bg);color:var(--texto);font-size:14.5px;line-height:1.45}
+svg.i{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* ---------- estructura ---------- */
+#shell{display:grid;grid-template-columns:var(--side) 1fr;min-height:100vh}
+aside{background:linear-gradient(180deg,var(--azul-osc),var(--azul));color:#dce7ff;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;padding:16px 12px;z-index:30}
+.marca{display:flex;align-items:center;gap:10px;padding:4px 6px 16px}
+.marca img{height:34px;background:#fff;border-radius:8px;padding:3px 8px}
+.marca b{font-size:13px;letter-spacing:.4px;color:#fff;line-height:1.1}
+.marca small{display:block;font-weight:400;color:#9db5e6;font-size:11px}
+.nav{display:flex;flex-direction:column;gap:3px;margin-top:6px}
+.nav button{all:unset;cursor:pointer;display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;color:#cfdcf7;transition:.15s;position:relative}
+.nav button:hover{background:rgba(255,255,255,.1);color:#fff}
+.nav button.act{background:var(--ambar);color:#1c2433;font-weight:650;box-shadow:0 4px 14px rgba(237,177,37,.35)}
+.nav .cuenta{margin-left:auto;background:var(--mal);color:#fff;border-radius:10px;font-size:11px;padding:1px 7px;font-weight:700}
+.lado-pie{margin-top:auto;font-size:12px;color:#9db5e6;padding:10px 8px;border-top:1px solid rgba(255,255,255,.12)}
+.vivo{display:inline-flex;align-items:center;gap:6px}
+.vivo i{width:8px;height:8px;border-radius:50%;background:#3ddc84;box-shadow:0 0 0 0 rgba(61,220,132,.7);animation:pulso 1.8s infinite}
+.vivo.caido i{background:#ff6b6b;animation:none}
+@keyframes pulso{70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+.principal{min-width:0;display:flex;flex-direction:column}
+.barra-sup{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(10px);display:flex;align-items:center;gap:12px;padding:12px 24px;border-bottom:1px solid var(--borde)}
+.barra-sup h1{font-size:19px;margin:0;font-weight:700;color:var(--texto)}
+.buscador{margin-left:auto;display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--borde);border-radius:10px;padding:0 10px;min-width:220px;max-width:340px;flex:1}
+.buscador input{border:0;background:none;outline:0;padding:9px 0;width:100%;color:var(--texto);font:inherit}
+.buscador kbd{font-size:11px;color:var(--suave);border:1px solid var(--borde);border-radius:5px;padding:0 5px}
+.ib{all:unset;cursor:pointer;width:38px;height:38px;border-radius:10px;display:grid;place-items:center;background:var(--panel);border:1px solid var(--borde);color:var(--texto);position:relative;transition:.15s}
+.ib:hover{border-color:var(--celeste);transform:translateY(-1px)}
+.ib .punto{position:absolute;top:-6px;right:-6px;background:var(--mal);color:#fff;border-radius:10px;font-size:11px;font-weight:700;padding:1px 6px;min-width:19px;text-align:center}
+.ib.campana.tiene{animation:campana 2.4s infinite}
+@keyframes campana{0%,90%,100%{transform:rotate(0)}93%{transform:rotate(14deg)}96%{transform:rotate(-12deg)}}
+.menu-mov{display:none}
+main{padding:22px 24px 60px;max-width:1280px;width:100%;animation:entra .25s ease}
+@keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* ---------- componentes ---------- */
+.fila{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.fila.sep{justify-content:space-between}
+.tarjeta{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);padding:16px;box-shadow:var(--sombra);margin-bottom:16px}
+.tarjeta h2,.sec-t{margin:0 0 12px;font-size:15px;font-weight:700}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:18px}
+.kpi{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);padding:14px 16px;box-shadow:var(--sombra);display:flex;gap:12px;align-items:center;transition:.2s;cursor:default}
+.kpi.clic{cursor:pointer}.kpi.clic:hover{transform:translateY(-3px);border-color:var(--celeste)}
+.kpi .ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;flex:none}
+.kpi{min-width:0}.kpi .n{font-size:26px;font-weight:750;line-height:1}
+.kpi .l{font-size:12px;color:var(--suave);margin-top:3px}
+.c-azul{background:var(--info-bg);color:var(--info)}.c-ok{background:var(--ok-bg);color:var(--ok)}.c-mal{background:var(--mal-bg);color:var(--mal)}.c-aviso{background:var(--aviso-bg);color:var(--aviso)}
+.btn{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:7px;padding:9px 14px;border-radius:10px;background:var(--azul);color:#fff;font-weight:600;font-size:14px;transition:.15s;box-sizing:border-box}
+.btn:hover{filter:brightness(1.12);transform:translateY(-1px)}
+.btn.sec{background:var(--panel);color:var(--azul);border:1px solid var(--borde)}
+:root[data-theme=dark] .btn.sec{color:#cfe0ff}
+.btn.ambar{background:var(--ambar);color:#1c2433}.btn.verde{background:var(--ok)}.btn.rojo{background:var(--mal)}
+.btn.chico{padding:5px 10px;font-size:13px;border-radius:8px}
+.btn[disabled],.btn.off{opacity:.45;pointer-events:none}
+input,select,textarea{font:inherit;color:var(--texto);background:var(--panel);border:1px solid var(--borde);border-radius:9px;padding:8px 10px;max-width:100%;outline:0;transition:.15s}
+input:focus,select:focus,textarea:focus{border-color:var(--celeste);box-shadow:0 0 0 3px rgba(91,181,234,.25)}
+textarea{width:100%;min-height:84px}
+label{display:block;font-size:12.5px;color:var(--suave);margin:10px 0 4px;font-weight:600}
+.cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:4px 14px}
+.cols input,.cols select{width:100%}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:12px;font-weight:650;background:var(--panel2);color:var(--suave);border:1px solid var(--borde);white-space:nowrap}
+.chip.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}.chip.mal{background:var(--mal-bg);color:var(--mal);border-color:transparent}.chip.aviso{background:var(--aviso-bg);color:var(--aviso);border-color:transparent}.chip.azul{background:var(--info-bg);color:var(--info);border-color:transparent}
+.chip.pulso::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor;animation:parp 1.2s infinite}
+@keyframes parp{50%{opacity:.25}}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.filtros button{all:unset;cursor:pointer;padding:6px 12px;border-radius:20px;border:1px solid var(--borde);background:var(--panel);font-size:13px;font-weight:600;color:var(--suave);transition:.15s}
+.filtros button:hover{border-color:var(--celeste)}
+.filtros button.act{background:var(--azul);color:#fff;border-color:var(--azul)}
+.tabla-wrap{overflow:auto;background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);box-shadow:var(--sombra)}
+table{border-collapse:collapse;width:100%;min-width:640px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--borde);vertical-align:middle}
+th{background:var(--panel2);color:var(--suave);font-size:12px;text-transform:uppercase;letter-spacing:.4px;position:sticky;top:0;white-space:nowrap}
+tbody tr{transition:.12s}tr.clic{cursor:pointer}tr.clic:hover{background:var(--panel2)}
+tr:last-child td{border-bottom:0}
+.msg{padding:11px 13px;border-radius:10px;margin:8px 0;font-size:14px;white-space:pre-wrap;border:1px solid transparent}
+.msg.ok{background:var(--ok-bg);color:var(--ok);font-weight:650}.msg.mal{background:var(--mal-bg);color:var(--mal)}.msg.aviso{background:var(--aviso-bg);color:var(--aviso)}.msg.info{background:var(--info-bg);color:var(--info)}
+.peq{font-size:12.5px;color:var(--suave)}
+.progreso{height:9px;background:var(--panel2);border:1px solid var(--borde);border-radius:6px;overflow:hidden}
+.progreso>div{height:100%;background:linear-gradient(90deg,var(--celeste),var(--azul));transition:width .6s}
+.progreso.anim>div{background-size:30px 30px;background-image:linear-gradient(135deg,rgba(255,255,255,.28) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.28) 50%,rgba(255,255,255,.28) 75%,transparent 75%);animation:rayas 1s linear infinite}
+@keyframes rayas{to{background-position:30px 0}}
+/* clientes en tarjetas */
+.rejilla{display:grid;grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:16px}
+.cli{background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);box-shadow:var(--sombra);padding:16px;display:flex;flex-direction:column;gap:12px;transition:.2s;animation:entra .3s ease both}
+.cli:hover{transform:translateY(-3px);border-color:var(--celeste)}
+.cli.mal{border-color:var(--mal)}
+.avatar{width:44px;height:44px;border-radius:12px;display:grid;place-items:center;font-weight:800;color:#fff;font-size:16px;flex:none}
+.cli h3{margin:0;font-size:15.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.cli .fila>div:nth-child(2){min-width:0;flex:1}.cli .chip{flex:none}.cli .sub{font-size:12.5px;color:var(--suave)}
+.dato{display:flex;justify-content:space-between;font-size:13px;color:var(--suave)}.dato b{color:var(--texto);font-weight:650}
+.barra-u{display:flex;height:7px;border-radius:5px;overflow:hidden;background:var(--panel2);border:1px solid var(--borde)}
+.barra-u i{display:block;height:100%}
+.acciones{display:flex;gap:6px;flex-wrap:wrap;margin-top:auto}
+/* check enviado */
+.check{width:22px;height:22px;border-radius:50%;background:var(--ok);color:#fff;display:inline-grid;place-items:center;flex:none}
+.check svg{width:14px;height:14px;stroke-width:3}
+.check.grande{width:64px;height:64px;animation:pop .5s cubic-bezier(.3,1.6,.5,1)}.check.grande svg{width:34px;height:34px}
+@keyframes pop{from{transform:scale(0)}to{transform:scale(1)}}
+/* pasos */
+.pasos{display:flex;gap:0;margin:6px 0 14px}
+.paso{flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;position:relative;font-size:12px;color:var(--suave);text-align:center}
+.paso::before{content:"";position:absolute;top:15px;left:-50%;width:100%;height:3px;background:var(--borde);z-index:0}
+.paso:first-child::before{display:none}
+.paso.hecho::before,.paso.act::before{background:var(--ok)}
+.paso .b{width:32px;height:32px;border-radius:50%;background:var(--panel2);border:2px solid var(--borde);display:grid;place-items:center;z-index:1;font-weight:700}
+.paso.hecho .b{background:var(--ok);border-color:var(--ok);color:#fff}
+.paso.act .b{border-color:var(--celeste);color:var(--azul);animation:parp 1.3s infinite}
+.paso.mal .b{background:var(--mal);border-color:var(--mal);color:#fff}
+.paso.hecho,.paso.act,.paso.mal{color:var(--texto);font-weight:600}
+/* modales, cajón y avisos */
+.velo{position:fixed;inset:0;background:rgba(10,18,36,.55);backdrop-filter:blur(3px);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;z-index:60;animation:vel .18s}
+@keyframes vel{from{opacity:0}}
+.modal{background:var(--panel);border-radius:18px;padding:20px;width:100%;max-width:980px;margin:auto;box-shadow:0 30px 80px rgba(0,0,0,.4);animation:sube .22s cubic-bezier(.2,.9,.3,1)}
+@keyframes sube{from{opacity:0;transform:translateY(18px) scale(.98)}}
+.modal.chico{max-width:440px}.modal.ancho{max-width:1120px}.f_rmax,.f_rmin{width:72px}.f_placa{width:112px}.modal.medio{max-width:720px}
+.modal h3{margin:0 0 12px;font-size:18px;color:var(--texto)}
+.pie-modal{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;margin-top:16px}
+.cajon{position:fixed;top:0;right:0;height:100vh;width:min(430px,100vw);background:var(--panel);z-index:55;box-shadow:-20px 0 50px rgba(0,0,0,.25);transform:translateX(105%);transition:.28s;display:flex;flex-direction:column}
+.cajon.abierto{transform:none}
+.cajon header{padding:16px 18px;border-bottom:1px solid var(--borde);display:flex;align-items:center;justify-content:space-between}
+.cajon .cuerpo{padding:14px 16px;overflow:auto;flex:1;display:flex;flex-direction:column;gap:10px}
+.aviso-i{border:1px solid var(--borde);border-left:4px solid var(--mal);border-radius:10px;padding:11px 12px;background:var(--panel2);animation:entra .25s both}
+.aviso-i.aviso{border-left-color:var(--ambar)}
+.aviso-i b{display:block;margin-bottom:2px}
+.aviso-i .t{font-size:13px;color:var(--suave)}
+#toasts{position:fixed;bottom:18px;right:18px;display:flex;flex-direction:column;gap:8px;z-index:90;max-width:min(380px,92vw)}
+.toast{background:#17233b;color:#fff;padding:11px 14px;border-radius:12px;box-shadow:0 10px 30px rgba(0,0,0,.35);display:flex;gap:10px;align-items:flex-start;animation:sube .25s;border-left:4px solid var(--celeste)}
+.toast.ok{border-left-color:#3ddc84}.toast.mal{border-left-color:#ff6b6b}
+.esq{background:linear-gradient(100deg,var(--panel2) 30%,var(--borde) 50%,var(--panel2) 70%);background-size:300% 100%;animation:esq 1.2s infinite;border-radius:var(--radio);height:130px}
+@keyframes esq{to{background-position:-150% 0}}
+.vacio{text-align:center;color:var(--suave);padding:40px 10px}
+/* guía */
+.g-paso{display:flex;gap:14px;background:var(--panel);border:1px solid var(--borde);border-radius:var(--radio);padding:14px 16px;margin-bottom:12px;box-shadow:var(--sombra);transition:.2s}
+.g-paso.hecho{opacity:.6;border-color:var(--ok)}
+.g-num{width:34px;height:34px;border-radius:50%;background:var(--azul);color:#fff;display:grid;place-items:center;font-weight:800;flex:none}
+.g-paso.hecho .g-num{background:var(--ok)}
+.g-paso h4{margin:2px 0 6px;font-size:15px}
+.g-paso p,.g-paso li{margin:4px 0;color:var(--texto)}
+.g-paso ul{margin:6px 0 0;padding-left:20px}
+.g-paso code,.guia code{background:var(--panel2);border:1px solid var(--borde);border-radius:6px;padding:1px 6px;font-size:13px}
+.g-chk{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--suave);white-space:nowrap;align-self:flex-start;cursor:pointer}
+.g-chk input{width:18px;height:18px;accent-color:var(--ok)}
+.nota{border-left:4px solid var(--ambar);background:var(--aviso-bg);color:var(--texto);padding:9px 12px;border-radius:8px;margin:8px 0;font-size:13.5px}
+.nota.info{border-left-color:var(--celeste);background:var(--info-bg)}
+.nota.mal{border-left-color:var(--mal);background:var(--mal-bg)}
+@media(max-width:900px){
+  #shell{grid-template-columns:1fr}
+  aside{position:fixed;left:0;top:0;transform:translateX(-105%);transition:.25s;width:var(--side)}
+  aside.abierto{transform:none;box-shadow:20px 0 50px rgba(0,0,0,.4)}
+  .menu-mov{display:grid}
+  .barra-sup{padding:10px 14px;flex-wrap:wrap}.buscador{order:9;max-width:none;flex-basis:100%;margin-left:0}
+  main{padding:16px 14px 60px}
+}
+</style>
+</head>
+<body>
+<div id="shell">
+  <aside id="lado">
+    <div class="marca"><img src="logo.png" alt="Navisaf" onerror="this.style.display='none'"><b>INFORMES<br>DE FLOTA<small>Navisaf</small></b></div>
+    <nav class="nav" id="nav"></nav>
+    <div class="lado-pie"><span class="vivo" id="vivo"><i></i><span id="vivoT">Conectando…</span></span></div>
+  </aside>
+  <div class="principal">
+    <div class="barra-sup">
+      <button class="ib menu-mov" data-act="menu" title="Menú"><svg class="i" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
+      <h1 id="titulo">Clientes</h1>
+      <label class="buscador" id="buscador"><svg class="i" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" placeholder="Buscar…" autocomplete="off"><kbd>/</kbd></label>
+      <button class="ib campana" id="campana" data-act="avisos" title="Avisos"><svg class="i" viewBox="0 0 24 24"><path d="M6 9a6 6 0 0 1 12 0c0 6 2 7 2 8H4c0-1 2-2 2-8zM10 21h4"/></svg><span class="punto" id="punto" style="display:none">0</span></button>
+      <button class="ib" data-act="tema" title="Modo claro/oscuro"><svg class="i" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg></button>
+    </div>
+    <main id="app"></main>
+  </div>
+</div>
+<div class="cajon" id="cajon"><header><b style="font-size:16px">Avisos que requieren atención</b><button class="ib" data-act="avisos"><svg class="i" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg></button></header><div class="cuerpo" id="avisosLista"></div></div>
+<div id="modales"></div>
+<div id="toasts"></div>
+
+<script>
+/* =====================================================================
+   CONFIGURACIÓN: pega aquí la URL de la aplicación web (termina en /exec)
+   ===================================================================== */
+var URL_API = 'https://script.google.com/macros/s/AKfycbyQ9BDGpHYLnyAZXgNQs1HhB9OTTXP9NTr62fiSMXGWKkWLg1ly8bELZ8c1PSZJ340Erg/exec';
+/* ===================================================================== */
+
+/* ---------- utilidades ---------- */
+var $ = function (id) { return document.getElementById(id); };
+function esc(s) { return String(s === undefined || s === null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+function n(v) { return v === undefined || v === null || v === '' || isNaN(Number(v)) ? '—' : (Math.round(Number(v) * 100) / 100).toLocaleString('es-PE'); }
+function guardarLocal(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+function leerLocal(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+var ICO = {
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+  file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/>',
+  key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3M14 9l2 2"/>',
+  rule: '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  cog: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  book: '<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"/><path d="M20 17v4H6.5A2.5 2.5 0 0 1 4 18.5"/>',
+  ok: '<path d="m5 12 5 5 9-10"/>', clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>', alert: '<path d="M12 3 2 20h20z"/><path d="M12 10v4M12 17.5h0"/>',
+  send: '<path d="M22 2 11 13M22 2l-7 20-4-9-9-4z"/>', plus: '<path d="M12 5v14M5 12h14"/>', cal: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/>', truck: '<path d="M1 6h13v10H1zM14 10h5l3 3v3h-8"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>'
+};
+function ic(k) { return '<svg class="i" viewBox="0 0 24 24">' + (ICO[k] || '') + '</svg>'; }
+function checkHtml(grande) { return '<span class="check' + (grande ? ' grande' : '') + '"><svg class="i" viewBox="0 0 24 24"><path d="m5 12 5 5 9-10"/></svg></span>'; }
+function colorDe(s) { var h = 0; for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return 'hsl(' + h + ',55%,42%)'; }
+function iniciales(s) { return String(s).split(/\s+/).filter(Boolean).slice(0, 2).map(function (x) { return x[0]; }).join('').toUpperCase(); }
+function contar(el, hasta) {
+  var ini = performance.now(), dur = 600;
+  function paso(t) { var p = Math.min(1, (t - ini) / dur); el.textContent = Math.round(hasta * (1 - Math.pow(1 - p, 3))); if (p < 1) requestAnimationFrame(paso); }
+  requestAnimationFrame(paso);
+}
+
+/* ---------- comunicación ---------- */
+var conexionOk = true;
+function estadoVivo(ok) {
+  conexionOk = ok; $('vivo').className = 'vivo' + (ok ? '' : ' caido');
+  $('vivoT').textContent = ok ? 'En línea · ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : 'Sin conexión con el servidor';
+}
+async function api(accion, datos, clave) {
+  if (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0) throw new Error('Falta pegar la URL /exec en la constante URL_API al inicio del archivo HTML.');
+  var cuerpo = Object.assign({ accion: accion }, datos || {});
+  if (clave !== undefined && clave !== null) cuerpo.clave = clave;
+  var t, j;
+  try {
+    var r = await fetch(URL_API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(cuerpo), redirect: 'follow' });
+    t = await r.text();
+  } catch (e) { estadoVivo(false); throw new Error('No hay conexión con el servidor.'); }
+  try { j = JSON.parse(t); } catch (e) { estadoVivo(false); throw new Error('La respuesta del servidor no es válida. Revisa que la aplicación web esté publicada con acceso «Cualquier persona».'); }
+  estadoVivo(true);
+  if (!j.ok) throw new Error(j.error || 'Error desconocido');
+  return j.datos;
+}
+async function ejecutar(fn, okMsg) {
+  try { var r = await fn(); if (okMsg) toast(okMsg, 'ok'); return r; }
+  catch (e) { alerta(e.message); return undefined; }
+}
+function toast(t, tipo) {
+  var d = document.createElement('div'); d.className = 'toast ' + (tipo || ''); d.innerHTML = '<span>' + esc(t) + '</span>';
+  $('toasts').appendChild(d); setTimeout(function () { d.style.transition = '.3s'; d.style.opacity = 0; setTimeout(function () { d.remove(); }, 300); }, 4600);
+}
+function alerta(m) { abrirModal('<h3>No se pudo completar</h3><div class="msg mal">' + esc(m) + '</div><div class="pie-modal"><button class="btn" data-act="cerrar">Entendido</button></div>', 'chico'); }
+
+/* ---------- modales ---------- */
+var pila = [];
+function abrirModal(html, tam) {
+  var d = document.createElement('div'); d.className = 'velo';
+  d.innerHTML = '<div class="modal ' + (tam || '') + '">' + html + '</div>';
+  d.addEventListener('mousedown', function (e) { if (e.target === d && d.dataset.fijo !== '1') cerrarModal(); });
+  $('modales').appendChild(d); pila.push(d); return d;
+}
+function cerrarModal() { var d = pila.pop(); if (d) d.remove(); }
+function pedirClave(titulo) {
+  return new Promise(function (res) {
+    var d = abrirModal('<h3>' + esc(titulo) + '</h3><p class="peq" style="margin-top:-6px">Esta acción requiere la contraseña de administrador.</p><label>Contraseña</label><input type="password" id="pwd" style="width:100%" autocomplete="off"><div class="pie-modal"><button class="btn sec" id="pc">Cancelar</button><button class="btn" id="po">Continuar</button></div>', 'chico');
+    d.dataset.fijo = '1';
+    var inp = d.querySelector('#pwd'); inp.focus();
+    function fin(v) { cerrarModal(); res(v); }
+    d.querySelector('#pc').onclick = function () { fin(null); };
+    d.querySelector('#po').onclick = function () { fin(inp.value); };
+    inp.onkeydown = function (e) { if (e.key === 'Enter') fin(inp.value); if (e.key === 'Escape') fin(null); };
+  });
+}
+
+/* ---------- navegación ---------- */
+var SECCIONES = [['clientes', 'Clientes', 'users'], ['emisiones', 'Emisiones', 'file'], ['credenciales', 'Credenciales', 'key'], ['reglas', 'Reglas', 'rule'], ['config', 'Configuración', 'cog'], ['guia', 'Guía', 'book']];
+var seccion = 'clientes', temporizador = null, adminClave = null, avisosCache = [];
+var cache = {};
+function pintarNav() {
+  $('nav').innerHTML = SECCIONES.map(function (s) {
+    var cuenta = s[0] === 'emisiones' && avisosCache.length ? '<span class="cuenta">' + avisosCache.length + '</span>' : '';
+    return '<button class="' + (s[0] === seccion ? 'act' : '') + '" data-act="ir" data-s="' + s[0] + '">' + ic(s[2]) + '<span>' + s[1] + '</span>' + cuenta + '</button>';
+  }).join('');
+}
+function ir(s) {
+  clearInterval(temporizador); temporizador = null;
+  adminClave = null; seccion = s; pintarNav();
+  $('lado').classList.remove('abierto'); $('q').value = ''; filtro.q = '';
+  $('titulo').textContent = SECCIONES.filter(function (x) { return x[0] === s; })[0][1];
+  $('buscador').style.display = (s === 'clientes' || s === 'emisiones') ? 'flex' : 'none';
+  if ((s === 'clientes' || s === 'emisiones' || s === 'credenciales' || s === 'reglas' || s === 'config') && (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0)) { s = 'guia'; seccion = 'guia'; pintarNav(); $('titulo').textContent = 'Guía'; $('buscador').style.display = 'none'; }
+  ({ clientes: vistaClientes, emisiones: vistaEmisiones, credenciales: vistaCredenciales, reglas: vistaReglas, config: vistaConfig, guia: vistaGuia })[s]();
+}
+
+/* ---------- avisos (campana) ---------- */
+async function refrescarAvisos() {
+  try {
+    avisosCache = await api('avisos_listar');
+  } catch (e) { return; }
+  var p = $('punto'); p.style.display = avisosCache.length ? 'block' : 'none'; p.textContent = avisosCache.length;
+  $('campana').classList.toggle('tiene', avisosCache.length > 0);
+  pintarNav();
+  if ($('cajon').classList.contains('abierto')) pintarAvisos();
+}
+function pintarAvisos() {
+  $('avisosLista').innerHTML = avisosCache.length ? avisosCache.map(function (a, i) {
+    var acc = '';
+    if (a.tipo === 'ENVIO_SIN_CONFIRMAR') acc = '<button class="btn chico verde" data-act="envioSi" data-id="' + esc(a.emision_id) + '">Sí se envió</button> <button class="btn chico rojo" data-act="envioNo" data-id="' + esc(a.emision_id) + '">No se envió</button>';
+    else if (a.tipo === 'SIN_EMISION') acc = '<button class="btn chico" data-act="crearAviso" data-i="' + i + '" data-auto="1">Crear y enviar si todo está bien</button> <button class="btn chico sec" data-act="crearAviso" data-i="' + i + '" data-auto="0">Crear y revisar yo</button>';
+    else acc = '<button class="btn chico sec" data-act="verEmision" data-id="' + esc(a.emision_id) + '">Abrir</button>';
+    return '<div class="aviso-i ' + esc(a.gravedad) + '"><b>' + esc(a.titulo) + ' · ' + esc(a.cliente) + '</b><div class="t">' + esc(a.texto) + '</div><div class="fila" style="margin-top:8px">' + acc + '</div></div>';
+  }).join('') : '<div class="vacio">' + checkHtml(true) + '<p><b>Todo en orden</b><br>No hay nada pendiente de revisar.</p></div>';
+}
+
+/* =============================== CLIENTES =============================== */
+var vistaTarjetas = leerLocal('vista') !== 'tabla', listaClientes = [];
+async function vistaClientes() {
+  $('app').innerHTML = '<div class="kpis" id="kpis"></div><div id="curso"></div><div class="fila sep" style="margin-bottom:14px"><div class="fila"><button class="btn ambar" data-act="nuevoCliente">' + ic('plus') + ' Nuevo cliente</button></div><div class="filtros" id="vt"><button data-act="vista" data-v="t" class="' + (vistaTarjetas ? 'act' : '') + '">Tarjetas</button><button data-act="vista" data-v="l" class="' + (vistaTarjetas ? '' : 'act') + '">Lista</button></div></div><div id="lista"><div class="rejilla"><div class="esq"></div><div class="esq"></div><div class="esq"></div></div></div>';
+  await cargarClientes();
+  temporizador = setInterval(function () { if (!pila.length) { cargarKpis(); } }, 8000);
+}
+async function cargarKpis() {
+  try {
+    var t = await api('tablero');
+    var K = [['users', 'c-azul', t.clientes, 'Clientes activos', ''], ['clock', 'c-azul', t.en_proceso, 'En proceso', ''], ['alert', t.retenidas ? 'c-mal' : 'c-ok', t.retenidas, 'Retenidos', 'emisiones'], ['file', t.listas ? 'c-aviso' : 'c-ok', t.listas, 'Listos para enviar', 'emisiones'], ['ok', 'c-ok', t.enviadas, 'Enviados', 'emisiones']];
+    var antes = $('kpis') && $('kpis').dataset.v;
+    var firma = JSON.stringify([t.clientes, t.en_proceso, t.retenidas, t.listas, t.enviadas, t.proximo_corte]);
+    if ($('kpis') && antes !== firma) {
+      $('kpis').dataset.v = firma;
+      $('kpis').innerHTML = K.map(function (k) { return '<div class="kpi' + (k[4] ? ' clic' : '') + '"' + (k[4] ? ' data-act="ir" data-s="' + k[4] + '"' : '') + '><div class="ico ' + k[1] + '">' + ic(k[0]) + '</div><div><div class="n" data-n="' + k[2] + '">0</div><div class="l">' + k[3] + '</div></div></div>'; }).join('') +
+        '<div class="kpi"><div class="ico c-azul">' + ic('cal') + '</div><div><div class="n" style="font-size:17px">' + esc(t.proximo_corte || '—') + '</div><div class="l">Próximo corte</div></div></div>';
+      $('kpis').querySelectorAll('[data-n]').forEach(function (e) { contar(e, Number(e.dataset.n)); });
+    }
+    // procesos en curso con avance en vivo
+    var html = '';
+    for (var i = 0; i < t.activas.length; i++) {
+      var e = t.activas[i], pr = null;
+      try { pr = (await api('emision_get', { id: e.id })).progreso; } catch (x) {}
+      var pct = pr && pr.metricasTotal ? Math.round(100 * pr.metricasOk / pr.metricasTotal) : 0;
+      html += '<div class="tarjeta" style="padding:12px 16px"><div class="fila sep"><b>' + esc(e.cliente) + ' <span class="peq">· ' + esc(e.tipo) + ' ' + esc(e.periodo_desde) + '</span></b><span class="chip azul pulso">Extrayendo ' + pct + '%</span></div><div class="progreso anim" style="margin-top:8px"><div style="width:' + pct + '%"></div></div><div class="peq" style="margin-top:4px">' + (pr ? pr.unidadesCompletas + ' de ' + pr.unidades + ' unidades · ' + pr.metricasOk + ' de ' + pr.metricasTotal + ' métricas' : '') + '</div></div>';
+    }
+    if ($('curso') && $('curso').dataset.v !== html) { $('curso').dataset.v = html; $('curso').innerHTML = html; }
+  } catch (e) {}
+}
+async function cargarClientes() {
+  cargarKpis();
+  var l = await ejecutar(function () { return api('clientes_listar'); });
+  if (!l) { $('lista').innerHTML = ''; return; }
+  listaClientes = l; pintarClientes();
+}
+function pintarClientes() {
+  var q = ($('q') ? $('q').value : '').toLowerCase().trim();
+  var l = listaClientes.filter(function (c) { return !q || (c.nombre_titulo + ' ' + c.razon_social).toLowerCase().indexOf(q) >= 0; });
+  if (!l.length) { $('lista').innerHTML = '<div class="tarjeta vacio">' + (listaClientes.length ? 'Ningún cliente coincide con la búsqueda.' : 'Aún no hay clientes. Pulsa «Nuevo cliente» para empezar.') + '</div>'; return; }
+  if (vistaTarjetas) {
+    $('lista').innerHTML = '<div class="rejilla">' + l.map(function (c, i) {
+      var tot = c.unidades_activas + c.unidades_pendientes || 1;
+      return '<div class="cli' + (c.estado !== 'ACTIVO' ? '' : '') + '" style="animation-delay:' + (i * 40) + 'ms"><div class="fila"><div class="avatar" style="background:' + colorDe(c.nombre_titulo) + '">' + esc(iniciales(c.nombre_titulo)) + '</div><div style="min-width:0"><h3>' + esc(c.nombre_titulo) + '</h3><div class="sub">' + esc(c.razon_social) + '</div></div><span class="chip ' + (c.estado === 'ACTIVO' ? 'ok' : '') + '" style="margin-left:auto">' + esc(c.estado) + '</span></div>' +
+        '<div><div class="dato"><span>' + ic('truck') + ' Unidades</span><b>' + c.unidades_activas + ' activas' + (c.unidades_pendientes ? ' · <span style="color:var(--aviso)">' + c.unidades_pendientes + ' pendientes</span>' : '') + '</b></div><div class="barra-u" style="margin-top:6px"><i style="width:' + (100 * c.unidades_activas / tot) + '%;background:var(--ok)"></i><i style="width:' + (100 * c.unidades_pendientes / tot) + '%;background:var(--ambar)"></i></div></div>' +
+        '<div class="dato"><span>Próximo corte</span><b>' + esc(c.proximo_corte) + '</b></div>' +
+        '<div class="dato"><span>Última emisión</span><b>' + (c.ultima_emision ? '<span class="vivo" style="gap:6px;display:inline-flex;align-items:center">' + checkHtml() + ' ' + esc(c.ultima_emision) + '</span>' : '—') + '</b></div>' +
+        (c.en_curso ? '<span class="chip azul pulso">' + c.en_curso + ' informe(s) en curso</span>' : '') +
+        '<div class="acciones"><button class="btn chico" data-act="unidades" data-id="' + esc(c.id) + '">Unidades</button><button class="btn chico sec" data-act="emiManual" data-id="' + esc(c.id) + '" data-n="' + esc(c.nombre_titulo) + '">Nueva emisión</button><button class="btn chico sec" data-act="editarCliente" data-id="' + esc(c.id) + '">Editar</button><a class="btn chico sec" target="_blank" rel="noopener" href="' + esc(c.carpeta_url) + '">Carpeta</a></div></div>';
+    }).join('') + '</div>';
+  } else {
+    $('lista').innerHTML = '<div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th>Unidades</th><th>Próximo corte</th><th>Última emisión</th><th>Estado</th><th></th></tr></thead><tbody>' + l.map(function (c) {
+      return '<tr><td><b>' + esc(c.nombre_titulo) + '</b><br><span class="peq">' + esc(c.razon_social) + '</span></td><td>' + c.unidades_activas + ' activas' + (c.unidades_pendientes ? ' <span class="chip aviso">' + c.unidades_pendientes + ' pend.</span>' : '') + '</td><td>' + esc(c.proximo_corte) + '</td><td>' + (c.ultima_emision ? checkHtml() + ' ' + esc(c.ultima_emision) : '—') + '</td><td><span class="chip ' + (c.estado === 'ACTIVO' ? 'ok' : '') + '">' + esc(c.estado) + '</span>' + (c.en_curso ? ' <span class="chip azul pulso">en curso</span>' : '') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn chico" data-act="unidades" data-id="' + esc(c.id) + '">Unidades</button> <button class="btn chico sec" data-act="emiManual" data-id="' + esc(c.id) + '" data-n="' + esc(c.nombre_titulo) + '">Nueva emisión</button> <button class="btn chico sec" data-act="editarCliente" data-id="' + esc(c.id) + '">Editar</button></td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+}
+
+async function nuevoCliente() {
+  var clave = await pedirClave('Agregar cliente'); if (clave === null) return;
+  var bases = await ejecutar(function () { return api('bases_nombres'); }); if (!bases) return;
+  if (!bases.length) return alerta('Primero registra una base de MyGeotab en «Credenciales».');
+  formCliente(null, bases, clave);
+}
+async function editarCliente(id) {
+  var clave = await pedirClave('Editar cliente'); if (clave === null) return;
+  var bases = await ejecutar(function () { return api('bases_nombres'); }); if (!bases) return;
+  var d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+  formCliente(d, bases, clave);
+}
+function formCliente(d, bases, clave) {
+  var c = d ? d.cliente : {}, f = d ? d.config : {}, df = d ? d.defecto : {};
+  var per = String(f.periodos || 'QUINCENAL,MENSUAL').toUpperCase();
+  var h = '<h3>' + (d ? 'Editar cliente' : 'Nuevo cliente') + '</h3><div class="cols">' +
+    '<div><label>Nombre / título del informe</label><input id="c_nt" value="' + esc(c.nombre_titulo) + '"></div>' +
+    '<div><label>Razón social (nombre del PDF)</label><input id="c_rs" value="' + esc(c.razon_social) + '"></div>' +
+    '<div><label>Base de MyGeotab</label><select id="c_base">' + bases.map(function (b) { return '<option value="' + esc(b.id) + '"' + (b.id === c.base_id ? ' selected' : '') + '>' + esc(b.nombre) + '</option>'; }).join('') + '</select></div>' +
+    '<div><label>Id del grupo en MyGeotab</label><input id="c_gr" value="' + esc(c.grupo_id) + '"></div>' +
+    '<div><label>Informes que recibe</label><select id="c_per"><option value="QUINCENAL,MENSUAL"' + (per === 'QUINCENAL,MENSUAL' ? ' selected' : '') + '>Quincenal y mensual</option><option value="QUINCENAL"' + (per === 'QUINCENAL' ? ' selected' : '') + '>Solo quincenal</option><option value="MENSUAL"' + (per === 'MENSUAL' ? ' selected' : '') + '>Solo mensual</option></select></div>' +
+    (d ? '<div><label>Estado</label><select id="c_est"><option' + (c.estado === 'ACTIVO' ? ' selected' : '') + '>ACTIVO</option><option' + (c.estado === 'INACTIVO' ? ' selected' : '') + '>INACTIVO</option></select></div>' : '') +
+    '</div><label>Para (correos separados por coma)</label><input style="width:100%" id="c_para" value="' + esc(f.destinatarios_para) + '">' +
+    '<label>Cc (opcional)</label><input style="width:100%" id="c_cc" value="' + esc(f.destinatarios_cc) + '">' +
+    '<label>Asunto (variables {CLIENTE} {TIPO} {PERIODO}). Vacío = usa el de Configuración</label><input style="width:100%" id="c_asu" value="' + esc(f.asunto) + '" placeholder="' + esc(df.asunto || '') + '">' +
+    '<label>Texto del correo. Vacío = usa el de Configuración</label><textarea id="c_cue" placeholder="' + esc(df.cuerpo || '') + '">' + esc(f.cuerpo) + '</textarea>' +
+    '<div class="cols"><div><label>Rendimiento máximo (km/gal) · vacío = ' + esc(df.rend_max || '') + '</label><input id="c_rmax" value="' + esc(f.rend_max) + '"></div>' +
+    '<div><label>Rendimiento mínimo (km/gal) · vacío = ' + esc(df.rend_min || '') + '</label><input id="c_rmin" value="' + esc(f.rend_min) + '"></div>' +
+    '<div><label>Bandas de eventos (4 valores) · vacío = ' + esc(df.bandas_eventos || '') + '</label><input id="c_be" value="' + esc(f.bandas_eventos) + '"></div>' +
+    '<div><label>Bandas velocidad máx. (4 valores) · vacío = ' + esc(df.bandas_velmax || '') + '</label><input id="c_bv" value="' + esc(f.bandas_velmax) + '"></div></div>' +
+    '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="c_ok">Guardar</button></div>';
+  var m = abrirModal(h, 'medio');
+  m.querySelector('#c_ok').onclick = async function () {
+    var g = function (i) { return m.querySelector('#' + i).value; };
+    var cl = { nombre_titulo: g('c_nt'), razon_social: g('c_rs'), base_id: g('c_base'), grupo_id: g('c_gr'), periodos: g('c_per'), destinatarios_para: g('c_para'), destinatarios_cc: g('c_cc'),
+      asunto: g('c_asu'), cuerpo: g('c_cue'), rend_max: g('c_rmax'), rend_min: g('c_rmin'), bandas_eventos: g('c_be'), bandas_velmax: g('c_bv') };
+    if (d) cl.estado = g('c_est');
+    var r = await ejecutar(function () { return d ? api('cliente_editar', { id: c.id, cliente: cl }, clave) : api('cliente_crear', { cliente: cl }, clave); });
+    if (r) { cerrarModal(); toast(d ? 'Cliente actualizado' : 'Cliente creado con su carpeta y su hoja de datos. Ahora entra a «Unidades» y pulsa «Actualizar unidades».', 'ok'); cargarClientes(); }
+  };
+}
+
+/* ---------- unidades (todo con contraseña) ---------- */
+var uCtx = { id: null, clave: null, perfiles: [], unidades: [], filtro: 'TODAS', texto: '' };
+async function abrirUnidades(id) {
+  var clave = await pedirClave('Unidades del cliente'); if (clave === null) return;
+  var perf = await ejecutar(function () { return api('perfiles_listar'); }); if (!perf) return;
+  var rg = await ejecutar(function () { return api('reglas_listar'); }); if (!rg) return;
+  var dg = await ejecutar(function () { return api('diagnosticos_listar'); }); if (!dg) return;
+  var d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+  uCtx = { id: id, clave: clave, nombre: d.cliente.nombre_titulo, perfiles: perf.perfiles.map(function (p) { return p.perfil; }), perfilesFull: perf.perfiles, reglas: rg.reglas, roles: rg.roles, diag: dg.diagnosticos, unidades: d.unidades, filtro: 'TODAS', texto: '' };
+  pintarUnidades(true);
+}
+function pintarUnidades(nuevo) {
+  var u = uCtx.unidades;
+  var cnt = { TODAS: u.length, ACTIVO: 0, PENDIENTE: 0, INACTIVO: 0 };
+  u.forEach(function (x) { cnt[x.estado] = (cnt[x.estado] || 0) + 1; });
+  var h = '<div class="fila sep"><h3 style="margin:0">Unidades · ' + esc(uCtx.nombre) + '</h3><button class="btn" id="u_act">Actualizar desde MyGeotab</button></div>' +
+    '<p class="peq">Las unidades nuevas entran como PENDIENTE y no se usan hasta activarlas con perfil y combustible. Una unidad INACTIVA deja de traer datos desde la próxima ejecución.</p>' +
+    '<div class="fila sep" style="margin-bottom:10px"><div class="filtros">' + [['TODAS', 'Todas'], ['ACTIVO', 'Activas'], ['PENDIENTE', 'Pendientes'], ['INACTIVO', 'Inactivas']].map(function (f) { return '<button data-act="uFiltro" data-f="' + f[0] + '" class="' + (uCtx.filtro === f[0] ? 'act' : '') + '">' + f[1] + ' (' + (cnt[f[0]] || 0) + ')</button>'; }).join('') + '</div><input id="u_txt" placeholder="Buscar placa…" value="' + esc(uCtx.texto) + '" style="width:180px"></div>' +
+    '<div class="fila" style="margin-bottom:10px;padding:10px;background:var(--panel2);border-radius:10px"><b class="peq">Aplicar a las marcadas:</b><select id="u_perfil"><option value="">Perfil…</option>' + uCtx.perfiles.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select><select id="u_comb"><option value="">Combustible…</option><option>DIESEL</option><option>GAS</option></select><select id="u_est"><option value="">Estado…</option><option>ACTIVO</option><option>PENDIENTE</option><option>INACTIVO</option></select><button class="btn chico sec" id="u_apl">Aplicar</button></div>' +
+    '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th><input type="checkbox" id="u_todos"></th><th>Placa (la que se imprime)</th><th>MyGeotab</th><th>Perfil</th><th>Combustible</th><th>Estado</th><th>Rend. máx</th><th>Rend. mín</th><th></th></tr></thead><tbody>' +
+    u.map(function (x, i) {
+      if (uCtx.filtro !== 'TODAS' && x.estado !== uCtx.filtro) return '';
+      if (uCtx.texto && (x.placa + ' ' + x.nombre_geotab).toLowerCase().indexOf(uCtx.texto.toLowerCase()) < 0) return '';
+      var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids;
+      return '<tr data-i="' + i + '"><td><input type="checkbox" class="u_sel"></td><td><input class="f_placa" size="9" value="' + esc(x.placa) + '"></td><td class="peq">' + esc(x.nombre_geotab) + '</td>' +
+        '<td><select class="f_perfil"><option value=""></option>' + uCtx.perfiles.map(function (p) { return '<option' + (p === x.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select></td>' +
+        '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option></select></td>' +
+        '<td><select class="f_est">' + ['ACTIVO', 'PENDIENTE', 'INACTIVO'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></td>' +
+        '<td><input class="f_rmax" size="4" value="' + esc(x.rend_max) + '"></td><td><input class="f_rmin" size="4" value="' + esc(x.rend_min) + '"></td>' +
+        '<td><button class="btn chico ' + (avanzado ? '' : 'sec') + '" data-act="uAvanzado" data-i="' + i + '">' + (avanzado ? 'Avanzado ●' : 'Avanzado') + '</button></td></tr>';
+    }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button><button class="btn verde" id="u_gua">Guardar cambios</button></div>';
+  if (!nuevo) cerrarModal();
+  var m = abrirModal(h, 'ancho');
+  m.dataset.fijo = '1';
+  m.querySelector('#u_txt').oninput = function () { leerUnidadesPantalla(m); uCtx.texto = this.value; var pos = this.value.length; pintarUnidades(false); var t = document.getElementById('u_txt'); t.focus(); t.setSelectionRange(pos, pos); };
+  m.querySelector('#u_todos').onchange = function (e) { m.querySelectorAll('.u_sel').forEach(function (c) { c.checked = e.target.checked; }); };
+  m.querySelector('#u_act').onclick = async function () {
+    leerUnidadesPantalla(m);
+    var r = await ejecutar(function () { return api('unidades_actualizar', { cliente_id: uCtx.id }, uCtx.clave); }); if (!r) return;
+    uCtx.unidades = r.unidades; toast(r.nuevas + ' nuevas · ' + r.inactivadas + ' inactivadas · ' + r.reactivadas + ' reactivadas', 'ok'); pintarUnidades(false);
+  };
+  m.querySelector('#u_apl').onclick = function () {
+    var p = m.querySelector('#u_perfil').value, c = m.querySelector('#u_comb').value, e = m.querySelector('#u_est').value, k = 0;
+    m.querySelectorAll('tr[data-i]').forEach(function (tr) {
+      if (!tr.querySelector('.u_sel').checked) return; k++;
+      if (p) tr.querySelector('.f_perfil').value = p; if (c) tr.querySelector('.f_comb').value = c; if (e) tr.querySelector('.f_est').value = e;
+    });
+    toast(k ? 'Aplicado a ' + k + ' unidades. Pulsa «Guardar cambios».' : 'Marca primero las unidades.');
+  };
+  m.querySelector('#u_gua').onclick = async function () {
+    leerUnidadesPantalla(m);
+    var r = await ejecutar(function () { return api('unidades_guardar', { cliente_id: uCtx.id, unidades: uCtx.unidades }, uCtx.clave); }, 'Unidades guardadas. Si hay informes en curso de este cliente, usa «Traer todo de nuevo» para que tomen el cambio.');
+    if (r) { uCtx.unidades = r; pintarUnidades(false); cargarClientes(); }
+  };
+}
+function leerUnidadesPantalla(m) {
+  m.querySelectorAll('tr[data-i]').forEach(function (tr) {
+    var x = uCtx.unidades[Number(tr.getAttribute('data-i'))];
+    x.placa = tr.querySelector('.f_placa').value; x.perfil = tr.querySelector('.f_perfil').value; x.combustible = tr.querySelector('.f_comb').value;
+    x.estado = tr.querySelector('.f_est').value; x.rend_max = tr.querySelector('.f_rmax').value; x.rend_min = tr.querySelector('.f_rmin').value;
+  });
+}
+var ROL_TXT = { velocidad_mayor_80: 'Velocidad mayor a 80 km/h', aceleracion_brusca: 'Aceleración brusca', frenada_brusca: 'Frenada brusca', giro_brusco: 'Giro brusco', rpm_bajo: 'RPM · Rango bajo', rpm_economico: 'RPM · Rango económico', rpm_potencia: 'RPM · Rango potencia', sobrerrevolucion: 'Sobrerrevoluciones', ralenti_rpm: 'Ralentí (RPM)' };
+var VAR_TXT = { ODO: 'Odómetro (distancia)', COMB: 'Combustible', HMOT: 'Horas de motor', HRAL: 'Horas en ralentí', CRAL: 'Consumo en ralentí' };
+function unidadAvanzada(i) {
+  var x = uCtx.unidades[i];
+  var ro, dg, uo;
+  try { ro = x.reglas_ids ? JSON.parse(x.reglas_ids) : {}; dg = x.diag_ids ? JSON.parse(x.diag_ids) : {}; uo = x.unidades_origen ? JSON.parse(x.unidades_origen) : {}; } catch (e) { ro = {}; dg = {}; uo = {}; }
+  var perfil = uCtx.perfilesFull.filter(function (p) { return p.perfil === x.perfil; })[0] || {};
+  var nombreRegla = {}; uCtx.reglas.forEach(function (r) { nombreRegla[r.id_regla] = r.nombre; });
+  var gas = String(x.combustible).toUpperCase() === 'GAS';
+  var claveDiag = { ODO: 'ODO', COMB: gas ? 'COMB_GAS' : 'COMB_DIESEL', HMOT: 'HMOT', HRAL: 'HRAL', CRAL: 'CRAL' };
+  var dgf = {}; uCtx.diag.forEach(function (d) { dgf[d.clave] = d; });
+  var h = '<h3>Configuración avanzada · ' + esc(x.placa) + '</h3><p class="peq">Solo para esta unidad. «Según perfil / por defecto» = usa lo definido en Reglas. Perfil actual: <b>' + esc(x.perfil || 'sin perfil') + '</b> · Combustible: <b>' + esc(x.combustible || '—') + '</b>.</p>' +
+    '<div class="sec-t" style="margin-top:14px">Reglas de MyGeotab (todas)</div><div class="cols">' +
+    uCtx.roles.map(function (r) {
+      var porPerfil = perfil[r] ? (nombreRegla[perfil[r]] || perfil[r]) : 'ninguna';
+      return '<div><label>' + esc(ROL_TXT[r] || r) + '</label><select data-rol="' + esc(r) + '"><option value="">Según perfil: ' + esc(porPerfil) + '</option>' +
+        uCtx.reglas.map(function (g) { return '<option value="' + esc(g.id_regla) + '"' + (ro[r] === g.id_regla ? ' selected' : '') + '>' + esc(g.nombre) + ' · ' + esc(g.categoria) + '</option>'; }).join('') + '</select></div>';
+    }).join('') + '</div>' +
+    '<div class="sec-t" style="margin-top:16px">Variables de medición (id del diagnóstico y unidad en que llega)</div><div class="tabla-wrap"><table><thead><tr><th>Variable</th><th>Id del diagnóstico</th><th>Unidad de origen</th></tr></thead><tbody>' +
+    ['ODO', 'COMB', 'HMOT', 'HRAL', 'CRAL'].map(function (k) {
+      var def = dgf[claveDiag[k]] || {}, posibles = String(def.unidades_posibles || '').split(',').filter(Boolean);
+      return '<tr data-var="' + k + '"><td><b>' + esc(VAR_TXT[k]) + '</b>' + (k === 'CRAL' && gas ? '<div class="peq">GAS: sin ralentí, va 0</div>' : '') + '</td><td><input class="v_id" style="width:100%;min-width:230px" placeholder="Por defecto: ' + esc(def.id_diagnostico || '') + '" value="' + esc(dg[k] || '') + '"></td>' +
+        '<td><select class="v_un"><option value="">Por defecto: ' + esc(def.unidad_origen || '') + '</option>' + posibles.map(function (p) { return '<option' + (uo[k] === p ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select></td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<p class="peq" style="margin-top:8px">La unidad de origen nunca se adivina: la eliges tú. Después de guardar, si ya hay informes en curso de este cliente usa «Traer todo de nuevo» para que tomen el cambio.</p>' +
+    '<div class="pie-modal"><button class="btn sec" id="o_reset">Restablecer todo a lo normal</button><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="o_ok">Aceptar</button></div>';
+  var m = abrirModal(h, 'ancho');
+  m.dataset.fijo = '1';
+  m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); toast('Restablecido. Pulsa «Aceptar».'); };
+  m.querySelector('#o_ok').onclick = function () {
+    var r = {}, d = {}, u = {};
+    m.querySelectorAll('select[data-rol]').forEach(function (sel) { if (sel.value) r[sel.getAttribute('data-rol')] = sel.value; });
+    m.querySelectorAll('tr[data-var]').forEach(function (tr) {
+      var k = tr.getAttribute('data-var'), id = tr.querySelector('.v_id').value.trim(), un = tr.querySelector('.v_un').value;
+      if (id) d[k] = id; if (un) u[k] = un;
+    });
+    x.reglas_ids = Object.keys(r).length ? JSON.stringify(r) : '';
+    x.diag_ids = Object.keys(d).length ? JSON.stringify(d) : '';
+    x.unidades_origen = Object.keys(u).length ? JSON.stringify(u) : '';
+    cerrarModal(); toast('Listo. Pulsa «Guardar cambios» en la lista de unidades.');
+    var mm = pila[pila.length - 1]; if (mm) { leerUnidadesPantalla(mm); pintarUnidades(false); }
+  };
+}
+
+/* ---------- emisión manual ---------- */
+function emisionManual(clienteId, nombre) {
+  var hoy = new Date(), a = hoy.getFullYear(), mes = hoy.getMonth() + 1;
+  var h = '<h3>Nueva emisión · ' + esc(nombre) + '</h3><p class="peq">Se extraen y validan los datos; NO se envía sola. Revisa en «Emisiones» y envía con el botón.</p><div class="cols">' +
+    '<div><label>Tipo</label><select id="e_tipo"><option>QUINCENAL</option><option>MENSUAL</option></select></div>' +
+    '<div><label>Año</label><input id="e_a" type="number" value="' + a + '"></div><div><label>Mes (1-12)</label><input id="e_m" type="number" min="1" max="12" value="' + mes + '"></div></div>' +
+    '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="e_ok">Crear</button></div>';
+  var m = abrirModal(h, 'chico');
+  m.querySelector('#e_ok').onclick = async function () {
+    var r = await ejecutar(function () { return api('emision_crear', { cliente_id: clienteId, tipo: m.querySelector('#e_tipo').value, anio: m.querySelector('#e_a').value, mes: m.querySelector('#e_m').value }); });
+    if (r) { cerrarModal(); toast(r.mensaje, 'ok'); ir('emisiones'); }
+  };
+}
+
+/* =============================== EMISIONES =============================== */
+var filtro = { q: '', estado: '' }, listaEmi = [];
+var ESTADOS = [['', 'Todos'], ['EN_COLA', 'En cola'], ['EXTRAYENDO', 'Extrayendo'], ['RETENIDO', 'Retenidos'], ['LISTO', 'Listos'], ['ENVIANDO', 'Enviando'], ['ENVIADO', 'Enviados']];
+var CLASE = { ENVIADO: 'ok', LISTO: 'aviso', RETENIDO: 'mal', EN_COLA: 'azul pulso', EXTRAYENDO: 'azul pulso', ENVIANDO: 'azul pulso' };
+async function vistaEmisiones() {
+  $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="filtros" id="filtros"></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista"><div class="esq"></div></div>';
+  await cargarEmisiones();
+  temporizador = setInterval(function () { if (!pila.length) cargarEmisiones(true); }, 6000);
+}
+async function cargarEmisiones(silencioso) {
+  try {
+    var todas = await api('emisiones_listar', { q: filtro.q });
+    listaEmi = todas;
+    if (!$('lista')) return;
+    var cuenta = {}; todas.forEach(function (e) { cuenta[e.estado] = (cuenta[e.estado] || 0) + 1; });
+    $('filtros').innerHTML = ESTADOS.map(function (s) { return '<button data-act="fEstado" data-e="' + s[0] + '" class="' + (filtro.estado === s[0] ? 'act' : '') + '">' + s[1] + (s[0] ? ' (' + (cuenta[s[0]] || 0) + ')' : ' (' + todas.length + ')') + '</button>'; }).join('');
+    var l = todas.filter(function (e) { return !filtro.estado || e.estado === filtro.estado; });
+    $('lista').innerHTML = l.length ? '<div class="tabla-wrap"><table><thead><tr><th></th><th>Cliente</th><th>Tipo</th><th>Periodo</th><th>Estado</th><th>Enviado</th><th>Destinatarios</th><th></th></tr></thead><tbody>' +
+      l.map(function (e) {
+        var sinConf = e.estado === 'ENVIANDO' && Number(e.bloqueo_hasta) < Date.now();
+        return '<tr class="clic" data-act="verEmision" data-id="' + esc(e.id) + '"><td style="width:34px">' + (e.estado === 'ENVIADO' ? checkHtml() : '') + '</td><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(e.tipo) + '</td><td>' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</td>' +
+          '<td><span class="chip ' + (sinConf ? 'mal' : (CLASE[e.estado] || '')) + '">' + esc(sinConf ? 'SIN CONFIRMAR' : e.estado) + '</span></td><td>' + esc(e.fecha_envio ? e.fecha_envio.replace('T', ' ').substring(0, 16) : '—') + '</td><td class="peq">' + esc(e.destinatarios || '—') + '</td>' +
+          '<td style="white-space:nowrap">' + (e.pdf_url ? '<a class="btn chico sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '" onclick="event.stopPropagation()">PDF</a>' : '') + '</td></tr>';
+      }).join('') + '</tbody></table></div>' : '<div class="tarjeta vacio">No hay emisiones con esos filtros.</div>';
+  } catch (e) { if (!silencioso) alerta(e.message); }
+}
+
+/* ---------- detalle de una emisión ---------- */
+var emActual = null, emTimer = null;
+async function detalleEmision(id) {
+  emActual = id; clearInterval(emTimer);
+  var m = abrirModal('<div id="det"><div class="esq"></div></div>');
+  async function pintar(forzar) {
+    var det = document.getElementById('det'); if (!det) { clearInterval(emTimer); return; }
+    var d; try { d = await api('emision_get', { id: id }); } catch (e) { det.innerHTML = '<div class="msg mal">' + esc(e.message) + '</div>'; return; }
+    det = document.getElementById('det'); if (!det) return;
+    var a = document.activeElement;
+    if (!forzar && a && (a.classList.contains('corr') || a.tagName === 'TEXTAREA')) return;
+    window.__det = d; det.innerHTML = htmlDetalle(d);
+  }
+  detalleEmision.repintar = function () { return pintar(true); };
+  await pintar(true);
+  emTimer = setInterval(function () { pintar(false); refrescarAvisos(); }, 4000);
+  new MutationObserver(function (_, o) { if (!document.body.contains(m)) { clearInterval(emTimer); o.disconnect(); } }).observe($('modales'), { childList: true });
+}
+function htmlDetalle(d) {
+  var e = d.emision;
+  var cab = '<div class="fila sep"><h3 style="margin:0">' + esc(e.cliente) + ' · ' + esc(e.tipo) + ' ' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</h3><span class="chip ' + (CLASE[e.estado] || '') + '">' + esc(e.estado) + '</span></div>';
+  if (e.estado === 'ENVIADO') {
+    return cab + '<div style="text-align:center;padding:24px 10px">' + checkHtml(true) + '<h3 style="margin:14px 0 4px">Informe enviado</h3><div class="peq">' + esc((e.fecha_envio || '').replace('T', ' ').substring(0, 16)) + ' · ' + esc(e.destinatarios) + '</div>' + (e.detalle && /confirmado/.test(e.detalle) ? '<div class="peq">' + esc(e.detalle) + '</div>' : '') + '</div>' +
+      '<div class="pie-modal">' + (e.pdf_url ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') + '<button class="btn sec" data-act="cerrar">Cerrar</button></div>';
+  }
+  var t = d.progreso, pct = t.metricasTotal ? Math.round(100 * t.metricasOk / t.metricasTotal) : 0;
+  var proceso = e.estado === 'EN_COLA' || e.estado === 'EXTRAYENDO', enviando = e.estado === 'ENVIANDO';
+  var sinConf = enviando && Number(e.bloqueo_hasta) < Date.now();
+  var p1 = d.completa ? 'hecho' : (proceso ? 'act' : (e.estado === 'RETENIDO' ? 'mal' : ''));
+  var p2 = d.completa && d.valida ? 'hecho' : (d.completa ? 'mal' : '');
+  var p3 = e.pdf_url ? 'hecho' : (d.completa && d.valida ? 'act' : '');
+  var p4 = sinConf ? 'mal' : (enviando ? 'act' : '');
+  var paso = function (c, k, txt) { return '<div class="paso ' + c + '"><div class="b">' + (c === 'hecho' ? ic('ok').replace('class="i"', 'class="i" style="width:16px;height:16px;stroke-width:3"') : (c === 'mal' ? '!' : k)) + '</div>' + txt + '</div>'; };
+  var h = cab + '<div class="pasos">' + paso(p1, 1, 'Extracción') + paso(p2, 2, 'Validación') + paso(p3, 3, 'Vista previa') + paso(p4, 4, 'Envío') + '</div>';
+  h += '<div class="progreso' + (proceso ? ' anim' : '') + '"><div style="width:' + pct + '%"></div></div><div class="peq" style="margin:4px 0 8px">' + t.unidadesCompletas + ' de ' + t.unidades + ' unidades · ' + t.metricasOk + ' de ' + t.metricasTotal + ' métricas (' + pct + '%)</div>';
+  if (d.completa && d.valida) h += '<div class="msg ok">✔ Extracción completa: ' + t.unidadesCompletas + ' de ' + t.unidades + ' unidades, ' + t.metricasOk + ' de ' + t.metricasTotal + ' métricas. Validaciones correctas.</div>';
+  else if (d.completa) h += '<div class="msg aviso">Extracción completa, pero hay validaciones que corregir antes de enviar.</div>';
+  if (proceso) h += '<div class="msg info">Extrayendo datos de MyGeotab. Esta ventana se actualiza sola.' + (e.detalle ? '\n' + esc(e.detalle) : '') + '</div>';
+  if (e.estado === 'RETENIDO') h += '<div class="msg mal"><b>RETENIDO:</b> no se envió nada al cliente. Corrige o reintenta.</div>';
+  if (e.estado === 'LISTO' && e.resultado === 'ERROR_ENVIO') h += '<div class="msg mal"><b>El envío falló:</b> ' + esc(e.detalle) + '</div>';
+  if (sinConf) h += '<div class="msg mal"><b>Envío sin confirmar.</b> No se sabe si el correo salió. Revisa «Enviados» de tu Gmail y dinos qué pasó:<div class="fila" style="margin-top:8px"><button class="btn verde chico" data-act="envioSi" data-id="' + esc(e.id) + '">Sí se envió</button><button class="btn rojo chico" data-act="envioNo" data-id="' + esc(e.id) + '">No se envió</button></div></div>';
+  else if (enviando) h += '<div class="msg info">Enviando…</div>';
+  if (e.estado === 'LISTO' && e.resultado !== 'ERROR_ENVIO') h += '<div class="msg aviso">Lista. Genera la vista previa, revísala y pulsa «Enviar al cliente».</div>';
+  if (d.problemas.length) h += '<div class="msg mal"><b>Problemas (' + d.problemas.length + '):</b>\n' + d.problemas.map(function (p) { return '• ' + esc(p.placa) + ': ' + esc(p.detalle); }).join('\n') + '</div>';
+  var bloq = enviando && !sinConf;   // solo se bloquea mientras un envío está realmente en curso
+  var corriendo = proceso && Number(e.bloqueo_hasta) > Date.now();
+  if (proceso && !corriendo) h += '<div class="msg aviso">Si lleva varios minutos sin avanzar, pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído.</div>';
+  h += '<div class="sec-t" style="margin-top:12px">Qué puedes hacer</div><div class="fila" style="margin-bottom:12px">' +
+    '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_reintentar" data-todo="0" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-m="Reintento programado: solo lo pendiente o fallido">1 · Reintentar extracción</button>' +
+    '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiTodo" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '">1 · Traer todo de nuevo</button>' +
+    '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_validar" data-id="' + esc(e.id) + '" data-m="Validado de nuevo">2 · Validar de nuevo</button>' +
+    '<button class="btn ambar ' + (!d.completa || bloq ? 'off' : '') + '" data-act="generar" data-id="' + esc(e.id) + '">3 · Generar vista previa</button>' +
+    (e.pdf_url ? '<a class="btn sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') +
+    '<button class="btn verde ' + (e.estado !== 'LISTO' ? 'off' : '') + '" data-act="enviar" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' 4 · Enviar al cliente</button></div>' +
+    '<div class="fila" style="margin-bottom:6px"><button class="btn ' + (bloq ? 'off' : '') + '" data-act="reprocesar" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div>';
+  h += '<h3 style="margin-top:14px">Unidades</h3><div class="tabla-wrap" style="max-height:44vh"><table><thead><tr><th>Placa</th><th>Dist. km</th><th>Gal.</th><th>H. motor</th><th>Rend.</th><th>Vel. máx.</th><th>Nota</th><th>Estado</th><th></th></tr></thead><tbody>' +
+    d.unidades.map(function (u) {
+      var nf = (u.errores || []).length;
+      return '<tr><td><b>' + esc(u.placa) + '</b></td><td>' + n(u.dist) + '</td><td>' + n(u.gal) + '</td><td>' + n(u.hmot) + '</td><td>' + n(u.rend) + '</td><td>' + (u.vmax == null ? '—' : esc(u.vmax)) + '</td><td>' + (u.nota == null ? '—' : esc(u.nota)) + '</td>' +
+        '<td>' + (u.completa && !nf ? '<span class="chip ok">OK</span>' : (u.completa ? '<span class="chip mal">REVISAR</span>' : '<span class="chip aviso">INCOMPLETA</span>')) + ((u.manuales || []).length ? ' <span class="chip azul">manual</span>' : '') + '</td>' +
+        '<td><button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(u.placa) + '">Datos</button></td></tr>';
+    }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button></div>';
+  return h;
+}
+function datosUnidad(id, placa) {
+  var d = window.__det;
+  var mapa = {}; d.filas.filter(function (f) { return f.placa === placa; }).forEach(function (f) { mapa[f.metrica] = f; });
+  var un = d.unidades.filter(function (u) { return u.placa === placa; })[0] || {};
+  var h = '<h3>Datos de ' + esc(placa) + '</h3>' + ((un.errores || []).length ? '<div class="msg mal">' + un.errores.map(esc).join('\n') + '</div>' : '') +
+    '<p class="peq">Un valor corregido a mano se usa tal cual (en la unidad indicada) y queda marcado como manual en el informe. Si el sistema usó el último dato previo porque un día no tenía lectura, el motivo lo dice.</p>' +
+    '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th>Métrica</th><th>Estado</th><th>Inicio / Cantidad</th><th>Fin / Segundos</th><th>Motivo</th><th>Corregir</th><th></th></tr></thead><tbody>' +
+    d.metricas.map(function (mt) {
+      var f = mapa[mt.clave] || {};
+      return '<tr><td>' + esc(mt.nombre) + '</td><td>' + (f.manual === 'SI' ? '<span class="chip azul">MANUAL ' + esc(f.valor_manual) + '</span>' : '<span class="chip ' + (f.estado === 'OK' ? 'ok' : (f.estado === 'FALLO' ? 'mal' : 'aviso')) + '">' + esc(f.estado || '—') + '</span>') + '</td>' +
+        '<td>' + esc(f.v1) + '</td><td>' + esc(f.v2) + '</td><td class="peq">' + esc(f.motivo) + '</td>' +
+        '<td style="white-space:nowrap"><input class="corr" size="8" id="k_' + esc(mt.clave) + '" placeholder="' + esc(mt.unidad_manual) + '"> <button class="btn chico" data-act="corregir" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Guardar</button></td>' +
+        '<td>' + (f.manual === 'SI' ? '<button class="btn chico sec" data-act="restaurar" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Quitar manual</button>' : '') + '</td></tr>';
+    }).join('') + '</tbody></table></div>' +
+    '<label>Observación manual de la unidad (se imprime en el informe)</label><textarea id="k_obs">' + esc(un.obs) + '</textarea>' +
+    '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button><button class="btn" data-act="obs" data-id="' + esc(id) + '" data-p="' + esc(placa) + '">Guardar observación</button></div>';
+  abrirModal(h);
+}
+async function repintarDetalle() { if (detalleEmision.repintar) await detalleEmision.repintar(); cargarEmisiones(true); refrescarAvisos(); }
+
+/* =============================== CREDENCIALES =============================== */
+async function vistaCredenciales() {
+  var clave = await pedirClave('Administrador de credenciales');
+  if (clave === null) { ir('clientes'); return; }
+  adminClave = clave;
+  $('app').innerHTML = '<div class="fila" style="margin-bottom:14px"><button class="btn ambar" data-act="formBase">' + ic('plus') + ' Nueva base</button><span class="peq">Las credenciales se guardan sin cifrar en la hoja BASES. No compartas ese Sheet.</span></div><div id="lista"><div class="esq"></div></div>';
+  var l = await ejecutar(function () { return api('admin_bases_listar', {}, adminClave); });
+  if (!l) { adminClave = null; ir('clientes'); return; }
+  cache.basesAdm = l; renderBases(l);
+}
+function renderBases(l) {
+  $('lista').innerHTML = l.length ? '<div class="rejilla">' + l.map(function (b, i) {
+    return '<div class="cli"><div class="fila"><div class="avatar" style="background:' + colorDe(b.nombre) + '">' + ic('key') + '</div><div><h3>' + esc(b.nombre) + '</h3><div class="sub">' + esc(b.servidor || 'my.geotab.com') + '</div></div><span class="chip ' + (b.estado === 'ACTIVA' ? 'ok' : '') + '" style="margin-left:auto">' + esc(b.estado) + '</span></div>' +
+      '<div class="dato"><span>Base de datos</span><b>' + esc(b.base_datos) + '</b></div><div class="dato"><span>Usuario</span><b>' + esc(b.usuario) + '</b></div>' +
+      '<div class="acciones"><button class="btn chico" data-act="formBase" data-i="' + i + '">Editar</button><button class="btn chico rojo" data-act="borrarBase" data-i="' + i + '">Eliminar</button></div></div>';
+  }).join('') + '</div>' : '<div class="tarjeta vacio">No hay bases registradas. Pulsa «Nueva base».</div>';
+}
+function formBase(i) {
+  var b = i === undefined ? {} : cache.basesAdm[i];
+  var h = '<h3>' + (i === undefined ? 'Nueva base' : 'Editar base') + '</h3><div class="cols"><div><label>Nombre (el que verás al crear clientes)</label><input id="b_n" value="' + esc(b.nombre) + '"></div>' +
+    '<div><label>Servidor (vacío = my.geotab.com)</label><input id="b_s" value="' + esc(b.servidor) + '"></div><div><label>Base de datos</label><input id="b_d" value="' + esc(b.base_datos) + '"></div>' +
+    '<div><label>Usuario</label><input id="b_u" value="' + esc(b.usuario) + '" autocomplete="off"></div><div><label>Contraseña</label><input id="b_p" type="text" value="' + esc(b.contrasena) + '" autocomplete="off"></div>' +
+    '<div><label>Estado</label><select id="b_e"><option' + (b.estado !== 'INACTIVA' ? ' selected' : '') + '>ACTIVA</option><option' + (b.estado === 'INACTIVA' ? ' selected' : '') + '>INACTIVA</option></select></div></div>' +
+    '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="b_ok">Guardar</button></div>';
+  var m = abrirModal(h, 'medio');
+  m.querySelector('#b_ok').onclick = async function () {
+    var g = function (x) { return m.querySelector('#' + x).value; };
+    var r = await ejecutar(function () { return api('admin_base_guardar', { base: { id: b.id, nombre: g('b_n'), servidor: g('b_s'), base_datos: g('b_d'), usuario: g('b_u'), contrasena: g('b_p'), estado: g('b_e') } }, adminClave); }, 'Guardado');
+    if (r) { cerrarModal(); recargarBases(); }
+  };
+}
+async function recargarBases() { var l = await ejecutar(function () { return api('admin_bases_listar', {}, adminClave); }); if (l) { cache.basesAdm = l; renderBases(l); } }
+
+/* =============================== REGLAS =============================== */
+async function vistaReglas() {
+  $('app').innerHTML = '<div class="esq"></div>';
+  var rg = await ejecutar(function () { return api('reglas_listar'); });
+  var pf = await ejecutar(function () { return api('perfiles_listar'); });
+  var dg = await ejecutar(function () { return api('diagnosticos_listar'); });
+  if (!rg || !pf || !dg) return;
+  cache.reglas = rg; cache.perfiles = pf;
+  var nombreRegla = {}; rg.reglas.forEach(function (r) { nombreRegla[r.id_regla] = r.nombre; });
+  $('app').innerHTML =
+    '<div class="tarjeta"><div class="fila sep"><h2>Biblioteca de reglas</h2><button class="btn ambar chico" data-act="formRegla">' + ic('plus') + ' Nueva regla</button></div><p class="peq">El «rol» le dice al sistema para qué sirve cada regla de MyGeotab.</p><div class="tabla-wrap"><table><thead><tr><th>Id de regla</th><th>Nombre</th><th>Categoría</th><th>Rol</th><th></th></tr></thead><tbody>' +
+    rg.reglas.map(function (r, i) { return '<tr><td class="peq">' + esc(r.id_regla) + '</td><td>' + esc(r.nombre) + '</td><td>' + esc(r.categoria) + '</td><td><span class="chip azul">' + esc(r.rol) + '</span></td><td style="white-space:nowrap"><button class="btn chico sec" data-act="formRegla" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarRegla" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
+    '<div class="tarjeta"><div class="fila sep"><h2>Perfiles de motor</h2><button class="btn ambar chico" data-act="formPerfil">' + ic('plus') + ' Nuevo perfil</button></div><div class="tabla-wrap"><table><thead><tr><th>Perfil</th>' + pf.roles.map(function (r) { return '<th>' + esc(r) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+    pf.perfiles.map(function (p, i) { return '<tr><td><b>' + esc(p.perfil) + '</b></td>' + pf.roles.map(function (r) { return '<td class="peq">' + esc(nombreRegla[p[r]] || p[r] || '—') + '</td>'; }).join('') + '<td style="white-space:nowrap"><button class="btn chico sec" data-act="formPerfil" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarPerfil" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
+    '<div class="tarjeta"><h2>Diagnósticos y unidad de origen</h2><p class="peq">La unidad de origen la eliges tú; el sistema nunca la adivina. También se puede cambiar por unidad en «Unidades › Avanzado».</p><div class="tabla-wrap"><table><thead><tr><th>Dato</th><th>Id del diagnóstico</th><th>Unidad de origen</th><th></th></tr></thead><tbody>' +
+    dg.diagnosticos.map(function (d) { return '<tr data-k="' + esc(d.clave) + '"><td>' + esc(d.etiqueta) + '</td><td><input class="d_id" style="width:100%;min-width:220px" value="' + esc(d.id_diagnostico) + '"></td><td><select class="d_un">' + String(d.unidades_posibles).split(',').map(function (u) { return '<option' + (u === d.unidad_origen ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></td><td><button class="btn chico" data-act="guardarDiag">Guardar</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
+}
+function formRegla(i) {
+  var r = i === undefined ? {} : cache.reglas.reglas[i];
+  var m = abrirModal('<h3>' + (i === undefined ? 'Nueva regla' : 'Editar regla') + '</h3><label>Id de la regla en MyGeotab</label><input style="width:100%" id="r_id" value="' + esc(r.id_regla) + '"' + (i === undefined ? '' : ' disabled') + '><label>Nombre</label><input style="width:100%" id="r_n" value="' + esc(r.nombre) + '"><label>Categoría</label><input style="width:100%" id="r_c" value="' + esc(r.categoria) + '"><label>Rol</label><select id="r_r">' + cache.reglas.roles.map(function (x) { return '<option' + (x === r.rol ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="r_ok">Guardar</button></div>', 'chico');
+  m.querySelector('#r_ok').onclick = async function () {
+    var g = function (x) { return m.querySelector('#' + x).value; };
+    var o = await ejecutar(function () { return api('regla_guardar', { regla: { id_regla: g('r_id'), nombre: g('r_n'), categoria: g('r_c'), rol: g('r_r') } }); }, 'Guardado');
+    if (o) { cerrarModal(); vistaReglas(); }
+  };
+}
+function formPerfil(i) {
+  var p = i === undefined ? {} : cache.perfiles.perfiles[i], pf = cache.perfiles;
+  var m = abrirModal('<h3>' + (i === undefined ? 'Nuevo perfil' : 'Editar perfil') + '</h3><label>Nombre del perfil</label><input id="p_n" value="' + esc(p.perfil) + '"' + (i === undefined ? '' : ' disabled') + '><div class="cols">' +
+    pf.roles.map(function (r) {
+      var cand = pf.reglas.filter(function (x) { return x.rol === r; });
+      return '<div><label>' + esc(r) + '</label><select data-r="' + esc(r) + '"><option value="">— ninguna —</option>' + cand.map(function (x) { return '<option value="' + esc(x.id_regla) + '"' + (x.id_regla === p[r] ? ' selected' : '') + '>' + esc(x.nombre) + '</option>'; }).join('') + '</select></div>';
+    }).join('') + '</div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="p_ok">Guardar</button></div>', 'medio');
+  m.querySelector('#p_ok').onclick = async function () {
+    var o = { perfil: m.querySelector('#p_n').value };
+    m.querySelectorAll('select[data-r]').forEach(function (s) { o[s.getAttribute('data-r')] = s.value; });
+    var r = await ejecutar(function () { return api('perfil_guardar', { perfil: o }); }, 'Guardado');
+    if (r) { cerrarModal(); vistaReglas(); }
+  };
+}
+
+/* =============================== CONFIGURACIÓN =============================== */
+async function vistaConfig() {
+  $('app').innerHTML = '<div class="esq"></div>';
+  var c = await ejecutar(function () { return api('config_get'); }); if (!c) return;
+  $('app').innerHTML = '<div class="tarjeta"><h2>Cortes y horario</h2><div class="cols">' +
+    '<div><label>Día del informe QUINCENAL (1 al 15 del mes)</label><input id="k_dq" type="number" min="1" max="28" value="' + esc(c.DIA_QUINCENAL) + '"></div>' +
+    '<div><label>Día del informe MENSUAL (mes anterior completo)</label><input id="k_dm" type="number" min="1" max="28" value="' + esc(c.DIA_MENSUAL) + '"></div>' +
+    '<div><label>Hora de ejecución (0-23, hora de Lima)</label><input id="k_h" type="number" min="0" max="23" value="' + esc(c.HORA_EJECUCION) + '"></div></div></div>' +
+    '<div class="tarjeta"><h2>Umbrales por defecto</h2><div class="cols">' +
+    '<div><label>Rendimiento máximo permitido (km/gal)</label><input id="k_rx" value="' + esc(c.REND_MAX) + '"></div>' +
+    '<div><label>Rendimiento mínimo permitido (km/gal)</label><input id="k_rn" value="' + esc(c.REND_MIN) + '"></div>' +
+    '<div><label>Bandas de eventos por 100 km (4 valores)</label><input id="k_be" value="' + esc(c.BANDAS_EVENTOS) + '"></div>' +
+    '<div><label>Bandas de velocidad máxima (4 valores)</label><input id="k_bv" value="' + esc(c.BANDAS_VELMAX) + '"></div></div></div>' +
+    '<div class="tarjeta"><h2>Correo por defecto</h2><label>Asunto (variables {CLIENTE} {TIPO} {PERIODO})</label><input style="width:100%" id="k_as" value="' + esc(c.ASUNTO) + '">' +
+    '<label>Texto del correo</label><textarea id="k_cu">' + esc(c.CUERPO) + '</textarea></div>' +
+    '<button class="btn verde" id="k_ok">Guardar configuración</button>';
+  $('k_ok').onclick = async function () {
+    var g = function (x) { return $(x).value; };
+    await ejecutar(function () { return api('config_set', { config: { DIA_QUINCENAL: g('k_dq'), DIA_MENSUAL: g('k_dm'), HORA_EJECUCION: g('k_h'), REND_MAX: g('k_rx'), REND_MIN: g('k_rn'), BANDAS_EVENTOS: g('k_be'), BANDAS_VELMAX: g('k_bv'), ASUNTO: g('k_as'), CUERPO: g('k_cu') } }); }, 'Configuración guardada');
+  };
+}
+
+
+/* =============================== GUÍA (dentro del panel) =============================== */
+var GUIA_TAB = 'instalacion';
+var G_INST = [
+  ['Crea la carpeta y el proyecto', '<p>En <b>Google Drive</b> crea una carpeta llamada <code>CAF AUTOMATICO</code>.</p><p>Entra a esa carpeta, haz clic derecho en un espacio vacío › <b>Más</b> › <b>Google Apps Script</b>. Se crea un proyecto <b>dentro</b> de la carpeta.</p><div class="nota">Es importante que el proyecto quede dentro de «CAF AUTOMATICO»: ahí se crearán solos el Sheet de control y la carpeta CLIENTES.</div>'],
+  ['Pega el manifiesto (appsscript.json)', '<ul><li>En el editor, pulsa el engranaje <b>Configuración del proyecto</b>.</li><li>Marca <b>«Mostrar el archivo de manifiesto appsscript.json en el editor»</b>.</li><li>Vuelve a <b>Editor</b>, abre <code>appsscript.json</code>, borra todo su contenido y pega el del archivo <code>appsscript.json</code> que te entregué.</li></ul>'],
+  ['Crea un archivo por cada script', '<p>Con el botón <b>+</b> › <b>Script</b> crea un archivo por cada <code>.gs</code> que te entregué. Ponle el <b>mismo nombre sin «.gs»</b> y pega su contenido:</p><ul><li><code>00_comun</code> · <code>01_mygeotab</code> · <code>02_extraccion</code> · <code>03_calculos</code></li><li><code>04_pdf</code> · <code>04b_pdf_slides</code> · <code>05_correo</code> · <code>06_panel_api</code></li><li><code>07_instalador</code> · <code>09_logo</code></li></ul><p>Borra el archivo <code>Código.gs</code> vacío que trae al inicio. Pulsa <b>Guardar</b> (Ctrl+S).</p>'],
+  ['Ejecuta la instalación', '<p>En la barra superior elige la función <code>instalarProyecto</code> y pulsa <b>Ejecutar</b>.</p><p>Google pide permisos: <b>Revisar permisos</b> › tu cuenta › <b>Avanzado</b> › <b>Ir al proyecto</b> › <b>Permitir</b>.</p><p>Al terminar, abre el <b>Registro de ejecución</b> (abajo): verás los enlaces del Sheet de control y de la carpeta CLIENTES. Puedes ejecutarla otra vez sin riesgo: no duplica nada.</p>'],
+  ['Cambia tu contraseña de administrador', '<p><b>Configuración del proyecto</b> › <b>Propiedades de la secuencia de comandos</b> › busca <code>ID_ADMINISTRADOR</code>.</p><p>Su <b>valor es la contraseña</b>. Al inicio vale <code>123456789</code>: cámbiala por la tuya. Esa contraseña se pide solo en: Credenciales, Agregar/Editar cliente y Unidades.</p>'],
+  ['Activa el disparador diario', '<p>Elige la función <code>activarTriggers</code> y pulsa <b>Ejecutar</b>. Crea la revisión diaria (6:00 a. m. hora de Lima por defecto; se cambia en Configuración). Si la ejecutas otra vez, no se duplica.</p>'],
+  ['Publica la aplicación web', '<ul><li><b>Implementar</b> › <b>Nueva implementación</b> › engranaje › <b>Aplicación web</b>.</li><li><b>Ejecutar como:</b> Yo. <b>Quién tiene acceso:</b> Cualquier persona.</li><li><b>Implementar</b> y copia la URL que termina en <code>/exec</code>.</li></ul><div class="nota">Si tu Google Workspace no deja elegir «Cualquier persona», pídele a tu administrador de Google que lo permita.</div><div class="nota info">Cuando cambies el código más adelante: Implementar › Administrar implementaciones › lápiz › Versión: <b>Nueva versión</b> › Implementar. La URL no cambia.</div>'],
+  ['Pega la URL en el panel', '<p>Abre el archivo <code>index.html</code> con el Bloc de notas (o cualquier editor). Cerca del inicio del script busca <code>URL_API</code> y pega tu URL entre las comillas:</p><p><code>var URL_API = \'https://script.google.com/macros/s/....../exec\';</code></p><p>Guarda el archivo.</p>'],
+  ['Sube el panel a GitHub', '<ul><li>Crea un repositorio y sube <b>estos archivos juntos</b>: <code>index.html</code>, <code>logo.png</code> y (opcional, solo de referencia) el PDF modelo.</li><li><b>Settings</b> › <b>Pages</b> › Branch <code>main</code> › <b>Save</b>.</li><li>GitHub te da la dirección de tu panel. Ábrela.</li></ul>'],
+  ['Registra tu base de MyGeotab', '<p>En el panel: <b>Credenciales</b> › escribe la contraseña de administrador › <b>Nueva base</b>: nombre, servidor (vacío = my.geotab.com), base de datos, usuario y contraseña de MyGeotab.</p><div class="nota">Las credenciales quedan sin cifrar en la hoja BASES del Sheet de control. No compartas ese Sheet.</div>'],
+  ['Haz una prueba completa', '<ul><li><b>Clientes</b> › Nuevo cliente › después <b>Unidades</b> › «Actualizar desde MyGeotab» › activa unidades con perfil y combustible.</li><li>«Nueva emisión» de un periodo <b>ya cerrado</b>.</li><li>Cuando llegue a LISTO: «Generar vista previa» y revisa el PDF con calma.</li></ul><p>Solo cuando el PDF te convenza, deja que corra en automático.</p>']
+];
+var G_USO = [
+  ['Crear un cliente', '<p><b>Clientes</b> › «Nuevo cliente» (pide contraseña). Elige la base de MyGeotab, escribe el <b>id del grupo</b>, la <b>razón social</b> (es el nombre del PDF), los correos <b>Para</b> y <b>Cc</b> (separados por coma) y, si quieres, asunto y texto propios. Se crean solas su carpeta y su hoja de datos.</p>'],
+  ['Traer y activar las unidades', '<p>En la tarjeta del cliente: <b>Unidades</b> (pide contraseña) › «Actualizar desde MyGeotab». Las nuevas entran como <b>PENDIENTE</b> y no se usan todavía.</p><p>Marca las unidades, elige <b>perfil de motor</b> (A26 EPA 2021 o X15), <b>combustible</b> (DIESEL o GAS) y estado <b>ACTIVO</b> › «Aplicar» › «Guardar cambios». La placa que escribas es la que se imprime.</p>'],
+  ['Configuración avanzada por unidad', '<p>El botón <b>Avanzado</b> permite, solo para esa unidad, cambiar <b>cualquiera de las 9 reglas</b> (velocidad, aceleración, frenada, giro, 3 rangos de RPM, sobrerrevoluciones, ralentí) y <b>cualquier variable de medición</b> (odómetro, combustible, horas de motor, horas de ralentí, consumo de ralentí): id del diagnóstico y unidad de origen.</p><div class="nota info">Una unidad en INACTIVO deja de traer datos desde la próxima ejecución. Además el sistema revisa MyGeotab y deja fuera sola a las unidades dadas de baja antes del periodo.</div><div class="nota">Si cambias algo y ya hay informes en curso, usa «Traer todo de nuevo» en esos informes.</div>'],
+  ['Editar un cliente', '<p>Botón <b>Editar</b> (pide contraseña): correos, asunto, texto, límites de rendimiento, qué informes recibe (quincenal, mensual o ambos) o desactivarlo.</p>'],
+  ['Cómo sale solo cada mes', '<p>Cada día a la hora configurada el sistema revisa: el <b>día 16</b> emite el <b>quincenal</b> (1 al 15) y el <b>día 1</b> el <b>mensual</b> del mes anterior.</p><p>Si todo está completo y correcto, <b>se envía solo</b>. Si algo falla o es dudoso queda <b>RETENIDO</b>: no se envía nada al cliente y te llega un correo a tu cuenta.</p>'],
+  ['Emisión manual', '<p>En el cliente: «Nueva emisión» › tipo, año y mes. Se extraen y validan los datos, pero <b>no se envía sola</b>: tú revisas y envías.</p>'],
+  ['Seguir el avance', '<p><b>Emisiones</b> › abre la fila. Verás los 4 pasos (Extracción, Validación, Vista previa, Envío), la barra de avance y, al terminar bien, el mensaje verde <b>«Extracción completa: N de N unidades, N de N métricas»</b>. Si MyGeotab pide esperar, el sistema espera y sigue solo.</p>'],
+  ['Corregir lo que salga mal', '<p>Si quedó RETENIDO, lee los problemas. En «Datos» de cada unidad puedes escribir un valor manual (queda marcado en el informe), quitarlo o dejar una observación. Luego «Validar de nuevo».</p><ul><li><b>Reintentar extracción</b>: repite solo lo que falló.</li><li><b>Traer todo de nuevo</b>: repite todo.</li></ul>'],
+  ['Vista previa', '<p>Con la extracción completa, «Generar vista previa» crea un PDF <b>borrador</b> (uno por cliente, se reemplaza cada vez). Ábrelo y revísalo.</p>'],
+  ['Enviar al cliente', '<p>«Enviar al cliente» solo se activa cuando todo está completo y verde. Envía el correo con el PDF, guarda el PDF final en la carpeta del cliente y vacía los datos de trabajo del periodo.</p><div class="nota info">Un informe enviado muestra un <b>check verde</b> ✔. Un informe ya enviado <b>no se puede enviar dos veces</b>.</div>'],
+  ['La campana de avisos', '<p>Arriba a la derecha. Todo lo que necesita tu atención aparece ahí (y como número rojo en el menú): informes retenidos, envíos sin confirmar, envíos que fallaron y cortes que quedaron sin informe.</p>'],
+  ['Revisar lo enviado', '<p><b>Emisiones</b> › buscador por cliente o fecha: ves destinatarios, estado, fecha de envío y el enlace al PDF. <b>Reglas</b> y <b>Configuración</b> (días de corte, hora, umbrales, textos del correo) se cambian sin contraseña.</p>']
+];
+var G_FALLA = [
+  ['Quedó RETENIDO (dato dudoso o faltante)', 'Abre la emisión y lee los problemas. Corrige el dato a mano o usa «Traer todo de nuevo». Luego «Validar de nuevo» → «Generar vista previa» → «Enviar al cliente».'],
+  ['La extracción se detuvo o no avanza', 'Pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído. Si MyGeotab estuvo caído, vuelve a intentarlo cuando regrese.'],
+  ['Falló el envío (por ejemplo, falta un destinatario)', 'La emisión queda LISTO y aparece en la campana. Corrige en «Editar» cliente y pulsa «Enviar al cliente» otra vez.'],
+  ['Envío sin confirmar (se cortó la ejecución)', 'Revisa «Enviados» en tu Gmail. Si el correo salió, pulsa «Sí se envió». Si no salió, pulsa «No se envió» y vuelve a enviarlo.'],
+  ['Pasó el corte y no hay informe', 'La campana te avisa. Elige «Crear y enviar si todo está bien» o «Crear y revisar yo».'],
+  ['Cambié la configuración de una unidad', 'Usa «Traer todo de nuevo» en el informe en curso para que tome el cambio.'],
+  ['Quiero rehacerlo todo de una vez', '«Reprocesar todo y enviar si queda correcto»: vuelve a consultar MyGeotab, valida y envía solo si todo queda verde. Si algo falla, queda RETENIDO sin enviar.']
+];
+var G_ESTADOS = [['EN_COLA', 'azul', 'Esperando su turno de extracción.'], ['EXTRAYENDO', 'azul', 'Trayendo datos de MyGeotab.'], ['RETENIDO', 'mal', 'Algo falló o es dudoso. No se envió nada.'], ['LISTO', 'aviso', 'Completo y correcto. Esperando el envío.'], ['ENVIANDO', 'azul', 'El correo está saliendo.'], ['ENVIADO', 'ok', 'Enviado ✔ (no se repite).']];
+var G_ARCHIVOS = [['appsscript.json', 'Manifiesto del proyecto de Apps Script (paso 2).'], ['00_comun.gs … 09_logo.gs (10 archivos)', 'Código del sistema; van en Apps Script (paso 3).'], ['index.html', 'El panel. Va a GitHub (paso 9) con tu URL /exec pegada.'], ['logo.png', 'Logo de Navisaf. Va a GitHub junto al index.html.'], ['MODELO_CAF_LA_VIGA….pdf', 'PDF modelo de referencia. Opcional; no lo usa el panel.']];
+var hechosMem = {};
+function leerHechos() { var h = {}; try { h = JSON.parse(leerLocal('guiaHechos') || '{}'); } catch (e) { h = {}; } return Object.assign(h, hechosMem); }
+function vistaGuia() {
+  var hechos = leerHechos();
+  var tabs = [['instalacion', 'Instalación (una sola vez)'], ['uso', 'Uso diario'], ['falla', 'Si algo falla'], ['ref', 'Estados y archivos']];
+  var cab = '<div class="fila sep" style="margin-bottom:14px"><div class="filtros">' + tabs.map(function (t) { return '<button data-act="gTab" data-t="' + t[0] + '" class="' + (GUIA_TAB === t[0] ? 'act' : '') + '">' + t[1] + '</button>'; }).join('') + '</div></div>';
+  var sinUrl = (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0) ? '<div class="nota">Este panel todavía no está conectado: falta pegar tu URL <code>/exec</code> (paso 8 de la instalación). La guía funciona igual.</div>' : '';
+  var cuerpo = '';
+  var pasos = function (lista, clave, conChk) {
+    var hechosN = lista.filter(function (_, i) { return hechos[clave + i]; }).length;
+    return (conChk ? '<div class="peq" style="margin-bottom:10px">Marca cada paso cuando lo termines · ' + hechosN + ' de ' + lista.length + ' hechos</div><div class="progreso" style="margin-bottom:14px"><div style="width:' + Math.round(100 * hechosN / lista.length) + '%"></div></div>' : '') +
+      lista.map(function (p, i) {
+        var h = conChk && hechos[clave + i];
+        return '<div class="g-paso' + (h ? ' hecho' : '') + '"><div class="g-num">' + (i + 1) + '</div><div style="flex:1;min-width:0"><h4>' + esc(p[0]) + '</h4>' + p[1] + '</div>' + (conChk ? '<label class="g-chk"><input type="checkbox" data-act="gChk" data-k="' + clave + i + '"' + (h ? ' checked' : '') + '> Hecho</label>' : '') + '</div>';
+      }).join('');
+  };
+  if (GUIA_TAB === 'instalacion') cuerpo = sinUrl + '<div class="nota info">Hazlo con la cuenta de Google que enviará los correos. Tiempo aproximado: 30 minutos. Los archivos que necesitas son los que te entregué junto con este panel.</div>' + pasos(G_INST, 'i', true) +
+    '<div class="nota">Nada de esto se probó contra tu Google real; por eso el paso 11 (prueba completa con un periodo cerrado) es obligatorio antes de dejarlo en automático.</div>';
+  else if (GUIA_TAB === 'uso') cuerpo = pasos(G_USO, 'u', false);
+  else if (GUIA_TAB === 'falla') cuerpo = '<div class="nota info">En cualquier fallo siempre puedes volver a extraer de MyGeotab, validar, ver la vista previa y enviar, desde el detalle de la emisión (pasos 1 al 4).</div>' + G_FALLA.map(function (f) { return '<div class="g-paso"><div class="g-num" style="background:var(--ambar);color:#1c2433">!</div><div><h4>' + esc(f[0]) + '</h4><p>' + esc(f[1]) + '</p></div></div>'; }).join('');
+  else cuerpo = '<div class="tarjeta"><h2>Qué significa cada estado</h2>' + G_ESTADOS.map(function (e) { return '<div class="fila" style="margin:8px 0"><span class="chip ' + e[1] + '" style="min-width:104px;justify-content:center">' + e[0] + '</span><span>' + esc(e[2]) + '</span></div>'; }).join('') + '</div>' +
+    '<div class="tarjeta"><h2>Colores de la NOTA en el PDF</h2><div class="fila"><span class="chip ok">15 a 20 · verde</span><span class="chip aviso">11 a 14 · amarillo</span><span class="chip mal">10 o menos · rojo</span></div><p class="peq">La NOTA es la suma de 6 sub-notas (1 a 5) × 2/3: sobrerrevoluciones, velocidad >80, velocidad máxima, giros, aceleraciones y frenadas. Sin eventos = 5.</p></div>' +
+    '<div class="tarjeta"><h2>Qué archivo va a dónde</h2><div class="tabla-wrap"><table><thead><tr><th>Archivo</th><th>Para qué sirve</th></tr></thead><tbody>' + G_ARCHIVOS.map(function (a) { return '<tr><td><code>' + esc(a[0]) + '</code></td><td>' + esc(a[1]) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
+    '<div class="tarjeta"><h2>Datos que conviene saber</h2><ul style="margin:0;padding-left:20px"><li>Si el primer o el último día no tiene lectura de un contador, se usa la última lectura de hasta 7 días antes y queda anotado en «Motivo».</li><li>Las credenciales de MyGeotab se guardan sin cifrar en la hoja BASES.</li><li>Un informe ENVIADO no se reenvía.</li></ul></div>';
+  $('app').innerHTML = '<div class="guia">' + cab + cuerpo + '</div>';
+}
+
+/* =============================== ACCIONES (delegación de eventos) =============================== */
+function aplicarTema(t) { document.documentElement.setAttribute('data-theme', t); guardarLocal('tema', t); }
+var ACT = {
+  gTab: function (d) { GUIA_TAB = d.t; vistaGuia(); },
+  gChk: function (d, b) { var h = leerHechos(); h[d.k] = b.checked; hechosMem[d.k] = b.checked; guardarLocal('guiaHechos', JSON.stringify(h)); vistaGuia(); },
+  ir: function (d) { cerrarCajon(); ir(d.s); },
+  menu: function () { $('lado').classList.toggle('abierto'); },
+  tema: function () { aplicarTema(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); },
+  avisos: function () { var c = $('cajon'); c.classList.toggle('abierto'); if (c.classList.contains('abierto')) { refrescarAvisos().then(pintarAvisos); pintarAvisos(); } },
+  cerrar: function () { cerrarModal(); },
+  vista: function (d) { vistaTarjetas = d.v === 't'; guardarLocal('vista', vistaTarjetas ? 'tarjetas' : 'tabla'); document.querySelectorAll('#vt button').forEach(function (b) { b.classList.toggle('act', b.dataset.v === d.v); }); pintarClientes(); },
+  nuevoCliente: nuevoCliente,
+  editarCliente: function (d) { editarCliente(d.id); },
+  unidades: function (d) { abrirUnidades(d.id); },
+  emiManual: function (d) { emisionManual(d.id, d.n); },
+  uFiltro: function (d) { var m = pila[pila.length - 1]; leerUnidadesPantalla(m); uCtx.filtro = d.f; pintarUnidades(false); },
+  uAvanzado: function (d) { unidadAvanzada(Number(d.i)); },
+  actualizar: function () { cargarEmisiones(); },
+  fEstado: function (d) { filtro.estado = d.e; cargarEmisiones(true); },
+  verEmision: function (d) { cerrarCajon(); detalleEmision(d.id); },
+  reprocesar: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; if (!confirm('Se volverá a consultar MyGeotab, se validará y, si todo queda correcto, se enviará el PDF a ' + d.n + '. Si algo falla queda RETENIDO sin enviar. ¿Continuar?')) return; await ejecutar(function () { return api('emision_reintentar', { id: d.id, todo: true, auto: true }); }, 'Reproceso programado: se enviará solo si queda correcto'); repintarDetalle(); },
+  emiAccion: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; await ejecutar(function () { return api(d.a, { id: d.id, todo: d.todo === '1' }); }, d.m); repintarDetalle(); },
+  emiTodo: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; if (!confirm('¿Traer todo de nuevo? Se descartan los datos extraídos (no las correcciones manuales).')) return; await ejecutar(function () { return api('emision_reintentar', { id: d.id, todo: true }); }, 'Se traerá todo de nuevo'); repintarDetalle(); },
+  generar: async function (d) { toast('Generando la vista previa, puede tardar un minuto…'); var r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); if (r) { toast('Vista previa lista', 'ok'); window.open(r.url, '_blank', 'noopener'); repintarDetalle(); } },
+  enviar: async function (d) { if (!confirm('¿Enviar el informe a ' + d.n + '? Esta acción no se puede repetir.')) return; var r = await ejecutar(function () { return api('emision_enviar', { id: d.id }); }); repintarDetalle(); if (r) toast('Informe enviado ✔', 'ok'); },
+  envioSi: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: true }); }, 'Confirmado: queda como ENVIADO'); if (r) { repintarDetalle(); } },
+  envioNo: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: false }); }, 'Vuelve a LISTO para enviarlo de nuevo'); if (r) { repintarDetalle(); } },
+  crearAviso: async function (d) { var a = avisosCache[Number(d.i)]; var r = await ejecutar(function () { return api('emision_crear', { cliente_id: a.cliente_id, tipo: a.crear.tipo, anio: a.crear.anio, mes: a.crear.mes, auto: d.auto === '1' }); }); if (r) { toast(r.mensaje, 'ok'); refrescarAvisos(); } },
+  datosUnidad: function (d) { datosUnidad(d.id, d.p); },
+  corregir: async function (d) { var v = document.getElementById('k_' + d.m).value; var r = await ejecutar(function () { return api('dato_corregir', { id: d.id, placa: d.p, metrica: d.m, valor: v }); }, 'Corregido y validado de nuevo'); if (r) { cerrarModal(); repintarDetalle(); } },
+  restaurar: async function (d) { var r = await ejecutar(function () { return api('dato_restaurar', { id: d.id, placa: d.p, metrica: d.m }); }, 'Valor manual quitado'); if (r) { cerrarModal(); repintarDetalle(); } },
+  obs: async function (d) { var r = await ejecutar(function () { return api('obs_guardar', { id: d.id, placa: d.p, texto: document.getElementById('k_obs').value }); }, 'Observación guardada'); if (r) { cerrarModal(); repintarDetalle(); } },
+  formBase: function (d) { formBase(d.i === undefined ? undefined : Number(d.i)); },
+  borrarBase: async function (d) { var b = cache.basesAdm[Number(d.i)]; if (!confirm('¿Eliminar la base «' + b.nombre + '»?')) return; var r = await ejecutar(function () { return api('admin_base_eliminar', { id: b.id }, adminClave); }, 'Eliminada'); if (r) recargarBases(); },
+  formRegla: function (d) { formRegla(d.i === undefined ? undefined : Number(d.i)); },
+  borrarRegla: async function (d) { var r = cache.reglas.reglas[Number(d.i)]; if (!confirm('¿Quitar la regla «' + r.nombre + '»?')) return; var o = await ejecutar(function () { return api('regla_eliminar', { id_regla: r.id_regla }); }, 'Quitada'); if (o) vistaReglas(); },
+  formPerfil: function (d) { formPerfil(d.i === undefined ? undefined : Number(d.i)); },
+  borrarPerfil: async function (d) { var p = cache.perfiles.perfiles[Number(d.i)]; if (!confirm('¿Quitar el perfil «' + p.perfil + '»?')) return; var o = await ejecutar(function () { return api('perfil_eliminar', { perfil: p.perfil }); }, 'Quitado'); if (o) vistaReglas(); },
+  guardarDiag: function (d, b) { var tr = b.closest('tr'); ejecutar(function () { return api('diagnostico_guardar', { diagnostico: { clave: tr.getAttribute('data-k'), id_diagnostico: tr.querySelector('.d_id').value, unidad_origen: tr.querySelector('.d_un').value } }); }, 'Guardado'); }
+};
+function cerrarCajon() { $('cajon').classList.remove('abierto'); }
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]'); if (!b) return;
+  var f = ACT[b.dataset.act]; if (f) { e.preventDefault(); f(b.dataset, b, e); }
+});
+$('q').addEventListener('input', function () {
+  if (seccion === 'clientes') pintarClientes();
+  else if (seccion === 'emisiones') { filtro.q = this.value; clearTimeout(ACT._t); ACT._t = setTimeout(function () { cargarEmisiones(true); }, 350); }
+});
+document.addEventListener('keydown', function (e) {
+  if (e.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) { e.preventDefault(); $('q').focus(); }
+  if (e.key === 'Escape') { if (pila.length && pila[pila.length - 1].dataset.fijo !== '1') cerrarModal(); else cerrarCajon(); }
+});
+
+/* ---------- arranque ---------- */
+aplicarTema(leerLocal('tema') || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
+pintarNav(); ir('clientes'); refrescarAvisos();
+setInterval(refrescarAvisos, 20000);
+</script>
+</body>
+</html>
