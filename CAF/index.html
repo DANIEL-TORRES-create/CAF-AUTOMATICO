@@ -623,6 +623,14 @@ function periodosCerrados(tipo) {
   }
   return lista;
 }
+/* Las fechas se guardan en UTC; en pantalla siempre se muestran en hora de Lima: "2026-11-09 16:57". */
+function fechaLima(iso) {
+  if (!iso) return '—';
+  var d = new Date(iso); if (isNaN(d.getTime())) return String(iso).replace('T', ' ').substring(0, 16);
+  var p = {}; new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Lima', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+    .formatToParts(d).forEach(function (x) { p[x.type] = x.value; });
+  return p.year + '-' + p.month + '-' + p.day + ' ' + p.hour + ':' + p.minute;
+}
 /* Periodo legible: "01–31 oct 2026 (mensual)" / "01–15 nov 2026 (quincenal)". Recibe "2026-10-01 (MENSUAL)" o (desde, tipo). */
 function textoEmision(txt, tipo) {
   var d = String(txt || ''), t = tipo;
@@ -686,7 +694,7 @@ async function cargarEmisiones(silencioso) {
       l.map(function (e) {
         var sinConf = e.estado === 'ENVIANDO' && Number(e.bloqueo_hasta) < Date.now();
         return '<tr class="clic" data-act="verEmision" data-id="' + esc(e.id) + '"><td style="width:34px">' + (e.estado === 'ENVIADO' ? checkHtml() : '') + '</td><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(e.tipo) + '</td><td>' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</td>' +
-          '<td><span class="chip ' + (sinConf ? 'mal' : (CLASE[e.estado] || '')) + '">' + esc(sinConf ? 'SIN CONFIRMAR' : e.estado) + '</span></td><td>' + esc(e.fecha_envio ? e.fecha_envio.replace('T', ' ').substring(0, 16) : '—') + '</td><td class="peq">' + esc(e.destinatarios || '—') + '</td>' +
+          '<td><span class="chip ' + (sinConf ? 'mal' : (CLASE[e.estado] || '')) + '">' + esc(sinConf ? 'SIN CONFIRMAR' : e.estado) + '</span></td><td>' + esc(fechaLima(e.fecha_envio)) + '</td><td class="peq">' + esc(e.destinatarios || '—') + '</td>' +
           '<td style="white-space:nowrap">' + (e.pdf_url ? '<a class="btn chico sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '" onclick="event.stopPropagation()">PDF</a>' : '') + '</td></tr>';
       }).join('') + '</tbody></table></div>' : '<div class="tarjeta vacio">No hay emisiones con esos filtros.</div>';
   } catch (e) { if (!silencioso) alerta(e.message); }
@@ -716,7 +724,7 @@ function htmlDetalle(d) {
   var e = d.emision;
   var cab = '<div class="fila sep"><h3 style="margin:0">' + esc(e.cliente) + ' · ' + esc(e.tipo) + ' ' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</h3><span class="chip ' + (CLASE[e.estado] || '') + '">' + esc(e.estado) + '</span></div>';
   if (e.estado === 'ENVIADO') {
-    return cab + '<div style="text-align:center;padding:24px 10px">' + checkHtml(true) + '<h3 style="margin:14px 0 4px">Informe enviado</h3><div class="peq">' + esc((e.fecha_envio || '').replace('T', ' ').substring(0, 16)) + ' · ' + esc(e.destinatarios) + '</div>' + (e.detalle && /confirmado/.test(e.detalle) ? '<div class="peq">' + esc(e.detalle) + '</div>' : '') + '</div>' +
+    return cab + '<div style="text-align:center;padding:24px 10px">' + checkHtml(true) + '<h3 style="margin:14px 0 4px">Informe enviado</h3><div class="peq">' + esc(fechaLima(e.fecha_envio)) + ' (hora de Lima)' + ' · ' + esc(e.destinatarios) + '</div>' + (e.detalle && /confirmado/.test(e.detalle) ? '<div class="peq">' + esc(e.detalle) + '</div>' : '') + '</div>' +
       '<div class="pie-modal">' + (e.pdf_url ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') + '<button class="btn sec" data-act="cerrar">Cerrar</button></div>';
   }
   var t = d.progreso, pct = t.metricasTotal ? Math.round(100 * t.metricasOk / t.metricasTotal) : 0;
