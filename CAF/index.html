@@ -703,7 +703,9 @@ async function detalleEmision(id) {
     det = document.getElementById('det'); if (!det) return;
     var a = document.activeElement;
     if (!forzar && a && (a.classList.contains('corr') || a.tagName === 'TEXTAREA')) return;
+    var masAbierto = !!det.querySelector('details.mas[open]');   // la ventana se refresca sola: se conserva «Más opciones» abierto
     window.__det = d; det.innerHTML = htmlDetalle(d);
+    if (masAbierto) { var dm = det.querySelector('details.mas'); if (dm) dm.open = true; }
   }
   detalleEmision.repintar = function () { return pintar(true); };
   await pintar(true);
