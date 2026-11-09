@@ -130,6 +130,17 @@ tr:last-child td{border-bottom:0}
 .paso.hecho .b{background:var(--ok);border-color:var(--ok);color:#fff}
 .paso.act .b{border-color:var(--celeste);color:var(--azul);animation:parp 1.3s infinite}
 .paso.mal .b{background:var(--mal);border-color:var(--mal);color:#fff}
+.paso .aqui{font-size:11px;font-weight:700;color:var(--azul);background:var(--info-bg);border-radius:10px;padding:1px 9px;white-space:nowrap}
+.paso.actual{color:var(--texto);font-weight:700}
+.siguiente{border:1px solid var(--borde);border-left:4px solid var(--ambar);background:var(--panel2);border-radius:12px;padding:14px 16px;margin:12px 0}
+.siguiente.ok{border-left-color:var(--ok)}.siguiente.espera{border-left-color:var(--celeste)}
+.siguiente .t{font-size:12px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--suave);margin-bottom:4px}
+.siguiente .x{margin-bottom:10px;font-size:14px}
+.btn.grande{padding:12px 24px;font-size:15px}
+details.mas{margin:6px 0 12px}details.mas>summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--azul);padding:4px 0}
+details.mas .fila{margin-top:8px}
+.prob{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:4px 0}
+
 .paso.hecho,.paso.act,.paso.mal{color:var(--texto);font-weight:600}
 /* modales, cajón y avisos */
 .velo{position:fixed;inset:0;background:rgba(17,24,39,.45);display:flex;align-items:flex-start;justify-content:center;padding:20px;overflow:auto;z-index:60;animation:vel .18s}
@@ -713,7 +724,7 @@ function htmlDetalle(d) {
   var p2 = d.completa && d.valida ? 'hecho' : (d.completa ? 'mal' : '');
   var p3 = e.pdf_url ? 'hecho' : (d.completa && d.valida ? 'act' : '');
   var p4 = sinConf ? 'mal' : (enviando ? 'act' : '');
-  var paso = function (c, k, txt) { return '<div class="paso ' + c + '"><div class="b">' + (c === 'hecho' ? ic('ok').replace('class="i"', 'class="i" style="width:16px;height:16px;stroke-width:3"') : (c === 'mal' ? '!' : k)) + '</div>' + txt + '</div>'; };
+  var paso = function (c, k, txt) { return '<div class="paso ' + c + ' {A' + k + '}"><div class="b">' + (c === 'hecho' ? ic('ok').replace('class="i"', 'class="i" style="width:16px;height:16px;stroke-width:3"') : (c === 'mal' ? '!' : k)) + '</div>' + txt + '{B' + k + '}</div>'; };
   var h = cab + '<div class="pasos">' + paso(p1, 1, 'Extracción') + paso(p2, 2, 'Validación') + paso(p3, 3, 'Vista previa') + paso(p4, 4, 'Envío') + '</div>';
   h += '<div class="progreso' + (proceso ? ' anim' : '') + '"><div style="width:' + pct + '%"></div></div><div class="peq" style="margin:4px 0 8px">' + t.unidadesCompletas + ' de ' + t.unidades + ' unidades · ' + t.metricasOk + ' de ' + t.metricasTotal + ' métricas (' + pct + '%)</div>';
   if (d.completa && d.valida) h += '<div class="msg ok">✔ Extracción completa: ' + t.unidadesCompletas + ' de ' + t.unidades + ' unidades, ' + t.metricasOk + ' de ' + t.metricasTotal + ' métricas. Validaciones correctas.</div>';
@@ -724,7 +735,7 @@ function htmlDetalle(d) {
   if (sinConf) h += '<div class="msg mal"><b>Envío sin confirmar.</b> No se sabe si el correo salió. Revisa «Enviados» de tu Gmail y dinos qué pasó:<div class="fila" style="margin-top:8px"><button class="btn verde chico" data-act="envioSi" data-id="' + esc(e.id) + '">Sí se envió</button><button class="btn rojo chico" data-act="envioNo" data-id="' + esc(e.id) + '">No se envió</button></div></div>';
   else if (enviando) h += '<div class="msg info">Enviando…</div>';
   if (e.estado === 'LISTO' && e.resultado !== 'ERROR_ENVIO') h += '<div class="msg aviso">Lista. Genera la vista previa, revísala y pulsa «Enviar al cliente».</div>';
-  if (d.problemas.length) h += '<div class="msg mal"><b>Problemas (' + d.problemas.length + '):</b>\n' + d.problemas.map(function (p) { return '• ' + esc(p.placa) + ': ' + esc(p.detalle); }).join('\n') + '</div>';
+  if (d.problemas.length) h += '<div class="msg mal"><b>Problemas (' + d.problemas.length + '):</b>' + d.problemas.map(function (p) { return '<div class="prob"><span>• <b>' + esc(p.placa) + ':</b> ' + esc(p.detalle) + '</span><button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(p.placa) + '">Corregir datos</button></div>'; }).join('') + '</div>';
   var bloq = enviando && !sinConf;   // solo se bloquea mientras un envío está realmente en curso
   var corriendo = proceso && Number(e.bloqueo_hasta) > Date.now();
   if (proceso && !corriendo) h += '<div class="msg aviso">Si lleva varios minutos sin avanzar, pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído.</div>';
@@ -732,19 +743,26 @@ function htmlDetalle(d) {
   var sig = '', sigTxt = '';
   if (bloq) { sig = ''; sigTxt = 'Enviando… espera a que termine.'; }
   else if (corriendo) { sig = ''; sigTxt = 'Extracción en curso: espera, esta ventana se actualiza sola.'; }
-  else if (!d.completa) { sig = '1'; sigTxt = '1 · Reintentar extracción (retoma lo que falta).'; }
-  else if (!d.valida) { sig = '2'; sigTxt = 'Corrige los datos señalados (botón «Datos») y pulsa 2 · Validar de nuevo.'; }
-  else if (!e.pdf_url) { sig = '3'; sigTxt = '3 · Generar vista previa.'; }
-  else if (e.estado === 'LISTO') { sig = '4'; sigTxt = 'Revisa el PDF y, si está bien, pulsa 4 · Enviar al cliente.'; }
-  var cl = function (k) { return k === sig ? (k === '4' ? 'verde' : 'ambar') : 'sec'; };
-  h += '<div class="sec-t" style="margin-top:12px">Qué puedes hacer</div>' + (sigTxt ? '<div class="peq" style="margin-bottom:8px"><b>Siguiente paso:</b> ' + esc(sigTxt) + '</div>' : '') + '<div class="fila" style="margin-bottom:12px">' +
-    '<button class="btn ' + cl('1') + ' ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_reintentar" data-todo="0" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-m="Reintento programado: solo lo pendiente o fallido">1 · Reintentar extracción</button>' +
-    '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiTodo" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '">1 · Traer todo de nuevo</button>' +
-    '<button class="btn ' + cl('2') + ' ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_validar"data-id="' + esc(e.id) + '" data-m="Validado de nuevo">2 · Validar de nuevo</button>' +
-    '<button class="btn ' + cl('3') + ' ' + (!d.completa || bloq ? 'off' : '') + '" data-act="generar"data-id="' + esc(e.id) + '">3 · Generar vista previa</button>' +
-    (e.pdf_url ? '<a class="btn sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') +
-    '<button class="btn ' + cl('4') + ' ' + (e.estado !== 'LISTO' ? 'off' : '') + '" data-act="enviar"data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' 4 · Enviar al cliente</button></div>' +
-    '<div class="fila" style="margin-bottom:6px"><button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="reprocesar" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div>';
+  else if (!d.completa) { sig = '1'; sigTxt = 'Faltan datos por traer. Reintenta la extracción: retoma lo que falta sin perder lo ya traído.'; }
+  else if (!d.valida) { sig = '2'; sigTxt = 'Hay datos por corregir. Pulsa «Corregir datos» en la unidad señalada y luego valida de nuevo.'; }
+  else if (!e.pdf_url) { sig = '3'; sigTxt = 'Los datos están correctos. Genera la vista previa del PDF para revisarla.'; }
+  else if (e.estado === 'LISTO') { sig = '4'; sigTxt = 'Revisa el PDF y, si está bien, envíalo al cliente.'; }
+  // Un solo botón principal (el siguiente paso real). El resto de acciones queda en «Más opciones».
+  var run = corriendo ? 1 : 0, off = bloq ? ' off' : '';
+  var acc = {
+    '1': function (c, g) { return '<button class="btn ' + c + off + (g ? ' grande' : '') + '" data-act="emiAccion" data-a="emision_reintentar" data-todo="0" data-run="' + run + '" data-id="' + esc(e.id) + '" data-m="Reintento programado: solo lo pendiente o fallido">Reintentar extracción</button>'; },
+    '1b': function (c, g) { return '<button class="btn ' + c + off + '" data-act="emiTodo" data-run="' + run + '" data-id="' + esc(e.id) + '">Traer todo de nuevo</button>'; },
+    '2': function (c, g) { return '<button class="btn ' + c + off + (g ? ' grande' : '') + '" data-act="emiAccion" data-a="emision_validar" data-id="' + esc(e.id) + '" data-m="Validado de nuevo">Validar de nuevo</button>'; },
+    '3': function (c, g) { return '<button class="btn ' + c + (!d.completa || bloq ? ' off' : '') + (g ? ' grande' : '') + '" data-act="generar" data-id="' + esc(e.id) + '">Generar vista previa</button>'; },
+    '4': function (c, g) { return '<button class="btn ' + c + (e.estado !== 'LISTO' ? ' off' : '') + (g ? ' grande' : '') + '" data-act="enviar" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' Enviar al cliente</button>'; }
+  };
+  var estadoTxt = e.estado === 'RETENIDO' ? 'RETENIDO: no se envió nada al cliente.' : (e.estado === 'LISTO' ? 'LISTO para enviar.' : esc(e.estado) + '.');
+  h += '<div class="siguiente ' + (sig === '4' ? 'ok' : (sig ? '' : 'espera')) + '"><div class="t">Siguiente paso</div><div class="x">' + (sigTxt ? esc(sigTxt) : estadoTxt) + '</div>' +
+    (sig ? acc[sig]((sig === '4' ? 'verde' : 'ambar'), true) : '') + (e.pdf_url ? ' <a class="btn sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') + '</div>';
+  var otras = ['1', '1b', '2', '3'].filter(function (k) { return k !== sig; }).map(function (k) { return acc[k]('sec'); }).join('');
+  if (sig !== '4' && e.estado === 'LISTO' && e.pdf_url) otras += acc['4']('sec');
+  h += '<details class="mas"><summary>Más opciones</summary><div class="fila">' + otras + '</div>' +
+    '<div class="fila" style="margin-top:8px"><button class="btn sec' + off + '" data-act="reprocesar" data-run="' + run + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div></details>';
   h += '<h3 style="margin-top:14px">Unidades</h3><div class="tabla-wrap" style="max-height:44vh"><table><thead><tr><th>Placa</th><th>Dist. km</th><th>Gal.</th><th>H. motor</th><th>Rend.</th><th>Vel. máx.</th><th>Nota</th><th>Estado</th><th></th></tr></thead><tbody>' +
     d.unidades.map(function (u) {
       var nf = (u.errores || []).length;
@@ -752,6 +770,10 @@ function htmlDetalle(d) {
         '<td>' + (u.completa && !nf ? '<span class="chip ok">OK</span>' : (u.completa ? '<span class="chip mal">REVISAR</span>' : '<span class="chip aviso">INCOMPLETA</span>')) + ((u.manuales || []).length ? ' <span class="chip azul">manual</span>' : '') + '</td>' +
         '<td><button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(u.placa) + '">Datos</button></td></tr>';
     }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button></div>';
+  for (var k = 1; k <= 4; k++) {
+    var es = String(k) === sig;
+    h = h.replace('{A' + k + '}', es ? 'actual' : '').replace('{B' + k + '}', es ? '<span class="aqui">Estás aquí</span>' : '');
+  }
   return h;
 }
 /* Valor de una métrica con su unidad, tal como se usa en el informe. */
