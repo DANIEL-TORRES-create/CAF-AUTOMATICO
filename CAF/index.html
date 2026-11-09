@@ -202,7 +202,7 @@ tr:last-child td{border-bottom:0}
 /* =====================================================================
    CONFIGURACIÓN: pega aquí la URL de la aplicación web (termina en /exec)
    ===================================================================== */
-var URL_API = 'https://script.google.com/macros/s/AKfycbyQ9BDGpHYLnyAZXgNQs1HhB9OTTXP9NTr62fiSMXGWKkWLg1ly8bELZ8c1PSZJ340Erg/exec';
+var URL_API = 'PEGA_AQUI_LA_URL_EXEC';
 /* ===================================================================== */
 
 /* ---------- utilidades ---------- */
@@ -717,14 +717,23 @@ function htmlDetalle(d) {
   var bloq = enviando && !sinConf;   // solo se bloquea mientras un envío está realmente en curso
   var corriendo = proceso && Number(e.bloqueo_hasta) > Date.now();
   if (proceso && !corriendo) h += '<div class="msg aviso">Si lleva varios minutos sin avanzar, pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído.</div>';
-  h += '<div class="sec-t" style="margin-top:12px">Qué puedes hacer</div><div class="fila" style="margin-bottom:12px">' +
-    '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_reintentar" data-todo="0" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-m="Reintento programado: solo lo pendiente o fallido">1 · Reintentar extracción</button>' +
+  // paso recomendado según el estado: solo ese botón se destaca (los demás quedan neutros)
+  var sig = '', sigTxt = '';
+  if (bloq) { sig = ''; sigTxt = 'Enviando… espera a que termine.'; }
+  else if (corriendo) { sig = ''; sigTxt = 'Extracción en curso: espera, esta ventana se actualiza sola.'; }
+  else if (!d.completa) { sig = '1'; sigTxt = '1 · Reintentar extracción (retoma lo que falta).'; }
+  else if (!d.valida) { sig = '2'; sigTxt = 'Corrige los datos señalados (botón «Datos») y pulsa 2 · Validar de nuevo.'; }
+  else if (!e.pdf_url) { sig = '3'; sigTxt = '3 · Generar vista previa.'; }
+  else if (e.estado === 'LISTO') { sig = '4'; sigTxt = 'Revisa el PDF y, si está bien, pulsa 4 · Enviar al cliente.'; }
+  var cl = function (k) { return k === sig ? (k === '4' ? 'verde' : 'ambar') : 'sec'; };
+  h += '<div class="sec-t" style="margin-top:12px">Qué puedes hacer</div>' + (sigTxt ? '<div class="peq" style="margin-bottom:8px"><b>Siguiente paso:</b> ' + esc(sigTxt) + '</div>' : '') + '<div class="fila" style="margin-bottom:12px">' +
+    '<button class="btn ' + cl('1') + ' ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_reintentar" data-todo="0" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-m="Reintento programado: solo lo pendiente o fallido">1 · Reintentar extracción</button>' +
     '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiTodo" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '">1 · Traer todo de nuevo</button>' +
-    '<button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_validar" data-id="' + esc(e.id) + '" data-m="Validado de nuevo">2 · Validar de nuevo</button>' +
-    '<button class="btn ambar ' + (!d.completa || bloq ? 'off' : '') + '" data-act="generar" data-id="' + esc(e.id) + '">3 · Generar vista previa</button>' +
+    '<button class="btn ' + cl('2') + ' ' + (bloq ? 'off' : '') + '" data-act="emiAccion" data-a="emision_validar"data-id="' + esc(e.id) + '" data-m="Validado de nuevo">2 · Validar de nuevo</button>' +
+    '<button class="btn ' + cl('3') + ' ' + (!d.completa || bloq ? 'off' : '') + '" data-act="generar"data-id="' + esc(e.id) + '">3 · Generar vista previa</button>' +
     (e.pdf_url ? '<a class="btn sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') +
-    '<button class="btn verde ' + (e.estado !== 'LISTO' ? 'off' : '') + '" data-act="enviar" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' 4 · Enviar al cliente</button></div>' +
-    '<div class="fila" style="margin-bottom:6px"><button class="btn ' + (bloq ? 'off' : '') + '" data-act="reprocesar" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div>';
+    '<button class="btn ' + cl('4') + ' ' + (e.estado !== 'LISTO' ? 'off' : '') + '" data-act="enviar"data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' 4 · Enviar al cliente</button></div>' +
+    '<div class="fila" style="margin-bottom:6px"><button class="btn sec ' + (bloq ? 'off' : '') + '" data-act="reprocesar" data-run="' + (corriendo ? 1 : 0) + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div>';
   h += '<h3 style="margin-top:14px">Unidades</h3><div class="tabla-wrap" style="max-height:44vh"><table><thead><tr><th>Placa</th><th>Dist. km</th><th>Gal.</th><th>H. motor</th><th>Rend.</th><th>Vel. máx.</th><th>Nota</th><th>Estado</th><th></th></tr></thead><tbody>' +
     d.unidades.map(function (u) {
       var nf = (u.errores || []).length;
@@ -734,17 +743,39 @@ function htmlDetalle(d) {
     }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button></div>';
   return h;
 }
+/* Valor de una métrica con su unidad, tal como se usa en el informe. */
+function hhmm(h) { var t = Math.round(Number(h) * 60), hh = Math.floor(t / 60), mm = t % 60; return hh.toLocaleString('es-PE') + ':' + (mm < 10 ? '0' : '') + mm; }
+function textoValor(clave, v) {
+  if (v === null || v === undefined || v === '' || isNaN(Number(v))) return '—';
+  var x = Number(v);
+  if (clave === 'DIST') return Math.round(x).toLocaleString('es-PE') + ' km';
+  if (clave === 'COMB' || clave === 'CRAL') return (Math.round(x * 10) / 10).toLocaleString('es-PE') + ' gal';
+  if (clave === 'HMOT' || clave === 'HRAL' || clave.indexOf('rpm_') === 0) return hhmm(x) + ' h';
+  if (clave === 'VMAX') return Math.round(x).toLocaleString('es-PE') + ' km/h';
+  return Math.round(x).toLocaleString('es-PE') + ' eventos';
+}
+/* Números crudos de MyGeotab, solo para revisar (se muestran plegados). */
+function detalleTecnico(mt, f) {
+  var crudo = function (x) { return (Math.round(Number(x) * 100) / 100).toLocaleString('es-PE'); };
+  var u = esc(String(f.unidad_cruda || '').toLowerCase());
+  if (f.v1 === '' || f.v1 === undefined) return '';
+  if (['DIST', 'COMB', 'HMOT', 'HRAL', 'CRAL'].indexOf(mt.clave) >= 0) return 'Lectura al inicio del periodo: ' + crudo(f.v1) + ' ' + u + '<br>Lectura al final del periodo: ' + crudo(f.v2) + ' ' + u + '<br>El valor es la diferencia, convertida.';
+  if (mt.clave === 'VMAX') return 'Velocidad máxima registrada en los viajes del periodo: ' + crudo(f.v1) + ' km/h.';
+  return 'Cantidad de eventos: ' + crudo(f.v1) + '<br>Duración total: ' + crudo(f.v2) + ' segundos.';
+}
 function datosUnidad(id, placa) {
   var d = window.__det;
   var mapa = {}; d.filas.filter(function (f) { return f.placa === placa; }).forEach(function (f) { mapa[f.metrica] = f; });
   var un = d.unidades.filter(function (u) { return u.placa === placa; })[0] || {};
   var h = '<h3>Datos de ' + esc(placa) + '</h3>' + ((un.errores || []).length ? '<div class="msg mal">' + un.errores.map(esc).join('\n') + '</div>' : '') +
-    '<p class="peq">Un valor corregido a mano se usa tal cual (en la unidad indicada) y queda marcado como manual en el informe. Si el sistema usó el último dato previo porque un día no tenía lectura, el motivo lo dice.</p>' +
-    '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th>Métrica</th><th>Estado</th><th>Inicio / Cantidad</th><th>Fin / Segundos</th><th>Motivo</th><th>Corregir</th><th></th></tr></thead><tbody>' +
+    '<p class="peq">Un valor corregido a mano se usa tal cual (en la unidad indicada) y queda marcado como manual en el informe. «Valor actual» es el número que va al informe. Si el sistema tuvo que usar el último dato previo porque un día no tenía lectura, lo avisa bajo el estado.</p>' +
+    '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th>Métrica</th><th>Estado</th><th>Valor actual</th><th>Corregir</th><th></th></tr></thead><tbody>' +
     d.metricas.map(function (mt) {
       var f = mapa[mt.clave] || {};
-      return '<tr><td>' + esc(mt.nombre) + '</td><td>' + (f.manual === 'SI' ? '<span class="chip azul">MANUAL ' + esc(f.valor_manual) + '</span>' : '<span class="chip ' + (f.estado === 'OK' ? 'ok' : (f.estado === 'FALLO' ? 'mal' : 'aviso')) + '">' + esc(f.estado || '—') + '</span>') + '</td>' +
-        '<td>' + esc(f.v1) + '</td><td>' + esc(f.v2) + '</td><td class="peq">' + esc(f.motivo) + '</td>' +
+      return '<tr><td>' + esc(mt.nombre) + '</td><td>' + (f.manual === 'SI' ? '<span class="chip azul">MANUAL ' + esc(f.valor_manual) + '</span>' : '<span class="chip ' + (f.estado === 'OK' ? 'ok' : (f.estado === 'FALLO' ? 'mal' : 'aviso')) + '">' + esc(f.estado || '—') + '</span>') + (f.motivo ? '<div class="peq" style="color:var(--aviso);margin-top:4px;max-width:260px">' + esc(f.motivo) + '</div>' : '') + '</td>' +
+        '<td><b>' + (f.manual === 'SI' ? textoValor(mt.clave, f.valor_manual) : textoValor(mt.clave, f.valor)) + '</b>' + (f.manual === 'SI' ? ' <span class="peq">(corregido a mano)</span>' : '') +
+          (f.valor_error && f.manual !== 'SI' ? '<div class="peq" style="color:var(--mal)">' + esc(f.valor_error) + '</div>' : '') +
+          (detalleTecnico(mt, f) ? '<details class="peq" style="margin-top:4px"><summary style="cursor:pointer">Ver detalle técnico</summary><div style="margin-top:4px">' + detalleTecnico(mt, f) + '</div></details>' : '') + '</td>' +
         '<td style="white-space:nowrap"><input class="corr" size="8" id="k_' + esc(mt.clave) + '" placeholder="' + esc(mt.unidad_manual) + '"> <button class="btn chico" data-act="corregir" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Guardar</button></td>' +
         '<td>' + (f.manual === 'SI' ? '<button class="btn chico sec" data-act="restaurar" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Quitar manual</button>' : '') + '</td></tr>';
     }).join('') + '</tbody></table></div>' +
