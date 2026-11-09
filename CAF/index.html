@@ -47,11 +47,16 @@ aside{background:#fff;border-right:1px solid var(--borde);color:var(--texto);pos
 main{padding:22px 24px 60px;max-width:1280px;width:100%;animation:entra .25s ease}
 @keyframes entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
 /* ---------- indicadores de carga ---------- */
-#carga{position:fixed;top:0;left:0;height:3px;width:0;background:var(--azul);z-index:100;opacity:0;transition:width .4s,opacity .3s}
-#carga.on{opacity:1}
-.btn.cargando{pointer-events:none;opacity:.8}
-.btn .rueda{width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gira .7s linear infinite;flex:none}
+.btn.cargando{pointer-events:none;opacity:.85}
+.cargando{pointer-events:none}
+.filtros button.cargando,.kpi.cargando,.ib.cargando,tr.cargando{opacity:.7}
+.nav button.cargando{opacity:.8}
+.rueda{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:gira .7s linear infinite;flex:none;vertical-align:-2px;margin-right:6px}
+.btn .rueda,.nav .rueda,.ib .rueda{margin-right:0}
+.btn .rueda{margin-right:2px}
+.rueda.grande{width:34px;height:34px;border-width:3px;color:var(--azul);margin:0}
 @keyframes gira{to{transform:rotate(360deg)}}
+.cargando-pantalla{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:46px 10px;color:var(--suave);font-weight:600}
 .err{color:var(--mal);font-size:13px;margin-top:8px}
 .periodo-info{background:var(--panel2);border:1px solid var(--borde);border-radius:8px;padding:9px 12px;margin-top:10px;font-size:13.5px}
 /* ---------- componentes ---------- */
@@ -173,7 +178,6 @@ tr:last-child td{border-bottom:0}
 </style>
 </head>
 <body>
-<div id="carga"></div>
 <div id="shell">
   <aside id="lado">
     <div class="marca"><img src="logo.png" alt="Navisaf" onerror="this.style.display='none'"><b>INFORMES<br>DE FLOTA<small>Navisaf</small></b></div>
@@ -198,7 +202,7 @@ tr:last-child td{border-bottom:0}
 /* =====================================================================
    CONFIGURACIÓN: pega aquí la URL de la aplicación web (termina en /exec)
    ===================================================================== */
-var URL_API = 'https://script.google.com/macros/s/AKfycbyQ9BDGpHYLnyAZXgNQs1HhB9OTTXP9NTr62fiSMXGWKkWLg1ly8bELZ8c1PSZJ340Erg/exec';
+var URL_API = 'PEGA_AQUI_LA_URL_EXEC';
 /* ===================================================================== */
 
 /* ---------- utilidades ---------- */
@@ -247,25 +251,55 @@ async function api(accion, datos, clave) {
   if (!j.ok) throw new Error(j.error || 'Error desconocido');
   return j.datos;
 }
-var botonActivo = null, botonT = 0, pendientes = 0, cargaT = null;
-document.addEventListener('click', function (e) { var b = e.target.closest ? e.target.closest('.btn') : null; if (b) { botonActivo = b; botonT = Date.now(); } }, true);
-function cargaMas(d) {
-  pendientes = Math.max(0, pendientes + d); var c = $('carga'); clearInterval(cargaT);
-  if (pendientes > 0) { c.classList.add('on'); var w = 12; c.style.width = w + '%'; cargaT = setInterval(function () { w += (92 - w) * 0.08; c.style.width = w + '%'; }, 300); }
-  else { c.style.width = '100%'; setTimeout(function () { if (!pendientes) { c.classList.remove('on'); c.style.width = '0'; } }, 250); }
-}
-var TEXTO_CARGA = { u_gua: 'Guardando…', c_ok: 'Guardando…', b_ok: 'Guardando…', r_ok: 'Guardando…', p_ok: 'Guardando…', k_ok: 'Guardando…', e_ok: 'Creando…', o_ok: 'Aceptando…', u_act: 'Consultando MyGeotab…', u_apl: 'Aplicando…', generar: 'Generando vista previa…', enviar: 'Enviando…', reprocesar: 'Programando…', corregir: 'Guardando…', obs: 'Guardando…', guardarDiag: 'Guardando…', actualizar: 'Actualizando…', restaurar: 'Quitando…' };
-async function ejecutar(fn, okMsg, textoCarga) {
-  var b = botonActivo && botonActivo.isConnected && Date.now() - botonT < 900 ? botonActivo : null; botonActivo = null;
-  var html0 = null;
-  if (b) {
-    html0 = b.innerHTML; b.classList.add('cargando');
-    b.innerHTML = '<span class="rueda"></span>' + esc(textoCarga || TEXTO_CARGA[b.id] || TEXTO_CARGA[b.dataset.act] || 'Procesando…');
+/* ---------- indicador de carga: toda acción muestra una rueda en lo que se pulsó ---------- */
+var TEXTO_CARGA = { u_gua: 'Guardando…', c_ok: 'Guardando…', b_ok: 'Guardando…', r_ok: 'Guardando…', p_ok: 'Guardando…', k_ok: 'Guardando…', e_ok: 'Creando…', o_ok: 'Aceptando…', u_act: 'Consultando MyGeotab…', u_apl: 'Aplicando…',
+  generar: 'Generando vista previa…', enviar: 'Enviando…', reprocesar: 'Programando…', corregir: 'Guardando…', obs: 'Guardando…', guardarDiag: 'Guardando…', actualizar: 'Actualizando…', restaurar: 'Quitando…',
+  emiAccion: 'Procesando…', emiTodo: 'Programando…', envioSi: 'Confirmando…', envioNo: 'Confirmando…', crearAviso: 'Creando…', borrarBase: 'Eliminando…', borrarRegla: 'Quitando…', borrarPerfil: 'Quitando…',
+  nuevoCliente: 'Abriendo…', editarCliente: 'Cargando…', unidades: 'Cargando…', emiManual: 'Cargando…', formBase: 'Abriendo…' };
+var tareaActual = null;
+function rueda(grande) { return '<span class="rueda' + (grande ? ' grande' : '') + '"></span>'; }
+function pantallaCarga(txt) { return '<div class="cargando-pantalla">' + rueda(true) + '<div>' + esc(txt || 'Cargando…') + '</div></div>'; }
+/* Cambia el aspecto de lo pulsado mientras trabaja y lo devuelve a su estado al terminar (sin reescribir el elemento,
+   salvo los botones con texto, que muestran la rueda y el texto de lo que están haciendo). */
+function crearTarea(el, texto) {
+  var html0 = null, activo = false, pausada = false, marca = null, oculto = null;
+  function on() {
+    if (activo || pausada || !el.isConnected) return; activo = true; el.classList.add('cargando');
+    if (el.classList.contains('btn')) {
+      html0 = el.innerHTML;
+      el.innerHTML = rueda() + esc(texto || el.dataset.carga || TEXTO_CARGA[el.id] || TEXTO_CARGA[el.dataset.act] || 'Procesando…');
+      return;
+    }
+    marca = document.createElement('span'); marca.className = 'rueda'; marca.setAttribute('aria-hidden', 'true');
+    var svg = el.tagName === 'TR' ? null : el.querySelector('svg');
+    if (svg) { oculto = svg; svg.style.display = 'none'; svg.parentNode.insertBefore(marca, svg); }
+    else { var dest = el.tagName === 'TR' ? (el.querySelector('td') || el) : el; dest.insertBefore(marca, dest.firstChild); }
   }
-  cargaMas(1);
+  function off() {
+    if (!activo) return; activo = false; el.classList.remove('cargando');
+    if (html0 !== null) { if (el.isConnected) el.innerHTML = html0; html0 = null; return; }
+    if (marca) { marca.remove(); marca = null; }
+    if (oculto) { oculto.style.display = ''; oculto = null; }
+  }
+  return { on: on, off: off, pausar: function () { pausada = true; off(); }, seguir: function () { pausada = false; on(); } };
+}
+/* Ejecuta fn (lo que hace el clic) con la rueda puesta en el elemento pulsado hasta que termine. */
+function lanzar(el, fn, texto) {
+  var t = crearTarea(el, texto); tareaActual = t;
+  var cerrar = function () { t.off(); if (tareaActual === t) tareaActual = null; };
+  var p; try { p = fn(); } catch (e) { cerrar(); throw e; }
+  if (!p || typeof p.then !== 'function') { cerrar(); return p; }
+  t.on();
+  return p.then(function (v) { cerrar(); return v; }, function (e) { cerrar(); throw e; });
+}
+/* Para botones con onclick propio. */
+function conRuedaFn(fn, texto) {
+  return function (e) { var b = e && e.currentTarget; if (!b) return fn.call(b, e); if (b.classList.contains('cargando')) return; return lanzar(b, function () { return fn.call(b, e); }, texto); };
+}
+function cargandoModal(txt) { var m = abrirModal(pantallaCarga(txt), 'chico'); m.dataset.fijo = '1'; return function () { var k = pila.indexOf(m); if (k >= 0) pila.splice(k, 1); m.remove(); }; }
+async function ejecutar(fn, okMsg) {
   try { var r = await fn(); if (okMsg) toast(okMsg, 'ok'); return r; }
   catch (e) { alerta(e.message); return undefined; }
-  finally { cargaMas(-1); if (b && b.isConnected) { b.classList.remove('cargando'); b.innerHTML = html0; } }
 }
 function toast(t, tipo) {
   var d = document.createElement('div'); d.className = 'toast ' + (tipo || ''); d.innerHTML = '<span>' + esc(t) + '</span>';
@@ -284,10 +318,11 @@ function abrirModal(html, tam) {
 function cerrarModal() { var d = pila.pop(); if (d) d.remove(); }
 function pedirClave(titulo, aviso) {
   return new Promise(function (res) {
+    var tp = tareaActual; if (tp) tp.pausar();
     var d = abrirModal('<h3>' + esc(titulo) + '</h3><p class="peq" style="margin-top:-6px">Esta acción requiere la contraseña de administrador.</p><label>Contraseña</label><input type="password" id="pwd" style="width:100%" autocomplete="off">' + (aviso ? '<div class="err">' + esc(aviso) + '</div>' : '') + '<div class="pie-modal"><button class="btn sec" id="pc">Cancelar</button><button class="btn" id="po">Continuar</button></div>', 'chico');
     d.dataset.fijo = '1';
     var inp = d.querySelector('#pwd'); inp.focus();
-    function fin(v) { cerrarModal(); res(v); }
+    function fin(v) { cerrarModal(); if (tp && v !== null) tp.seguir(); res(v); }
     d.querySelector('#pc').onclick = function () { fin(null); };
     d.querySelector('#po').onclick = function () { fin(inp.value); };
     inp.onkeydown = function (e) { if (e.key === 'Enter') fin(inp.value); if (e.key === 'Escape') fin(null); };
@@ -299,8 +334,8 @@ async function claveVerificada(titulo) {
   var aviso = '';
   for (;;) {
     var c = await pedirClave(titulo, aviso); if (c === null) return null;
-    try { cargaMas(1); await api('clave_verificar', {}, c); cargaMas(-1); return c; }
-    catch (e) { cargaMas(-1); if (/incorrecta/i.test(e.message)) { aviso = 'Contraseña incorrecta. Inténtalo de nuevo.'; continue; } alerta(e.message); return null; }
+    try { await api('clave_verificar', {}, c); return c; }
+    catch (e) { if (/incorrecta/i.test(e.message)) { aviso = 'Contraseña incorrecta. Inténtalo de nuevo.'; continue; } alerta(e.message); return null; }
   }
 }
 
@@ -309,10 +344,16 @@ var SECCIONES = [['clientes', 'Clientes', 'users'], ['emisiones', 'Emisiones', '
 var seccion = 'clientes', temporizador = null, adminClave = null, avisosCache = [];
 var cache = {};
 function pintarNav() {
-  $('nav').innerHTML = SECCIONES.map(function (s) {
-    var cuenta = s[0] === 'emisiones' && avisosCache.length ? '<span class="cuenta">' + avisosCache.length + '</span>' : '';
-    return '<button class="' + (s[0] === seccion ? 'act' : '') + '" data-act="ir" data-s="' + s[0] + '">' + ic(s[2]) + '<span>' + s[1] + '</span>' + cuenta + '</button>';
-  }).join('');
+  var nav = $('nav');
+  if (nav.children.length !== SECCIONES.length) {
+    nav.innerHTML = SECCIONES.map(function (s) { return '<button data-act="ir" data-s="' + s[0] + '">' + ic(s[2]) + '<span>' + s[1] + '</span></button>'; }).join('');
+  }
+  // se actualiza en el sitio (sin recrear los botones) para que la rueda de carga no se pierda al cambiar de sección
+  Array.prototype.forEach.call(nav.children, function (b) {
+    b.classList.toggle('act', b.dataset.s === seccion);
+    var c = b.querySelector('.cuenta'), n = b.dataset.s === 'emisiones' ? avisosCache.length : 0;
+    if (n) { if (!c) { c = document.createElement('span'); c.className = 'cuenta'; b.appendChild(c); } c.textContent = n; } else if (c) c.remove();
+  });
 }
 function ir(s) {
   clearInterval(temporizador); temporizador = null;
@@ -321,7 +362,7 @@ function ir(s) {
   $('titulo').textContent = SECCIONES.filter(function (x) { return x[0] === s; })[0][1];
   $('buscador').style.display = (s === 'clientes' || s === 'emisiones') ? 'flex' : 'none';
   if ((s === 'clientes' || s === 'emisiones' || s === 'credenciales' || s === 'reglas' || s === 'config') && (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0)) { s = 'guia'; seccion = 'guia'; pintarNav(); $('titulo').textContent = 'Guía'; $('buscador').style.display = 'none'; }
-  ({ clientes: vistaClientes, emisiones: vistaEmisiones, credenciales: vistaCredenciales, reglas: vistaReglas, config: vistaConfig, guia: vistaGuia })[s]();
+  return ({ clientes: vistaClientes, emisiones: vistaEmisiones, credenciales: vistaCredenciales, reglas: vistaReglas, config: vistaConfig, guia: vistaGuia })[s]();
 }
 
 /* ---------- avisos (campana) ---------- */
@@ -347,7 +388,7 @@ function pintarAvisos() {
 /* =============================== CLIENTES =============================== */
 var vistaTarjetas = leerLocal('vista') !== 'tabla', listaClientes = [];
 async function vistaClientes() {
-  $('app').innerHTML = '<div class="kpis" id="kpis"></div><div id="curso"></div><div class="fila sep" style="margin-bottom:14px"><div class="fila"><button class="btn ambar" data-act="nuevoCliente">' + ic('plus') + ' Nuevo cliente</button></div><div class="filtros" id="vt"><button data-act="vista" data-v="t" class="' + (vistaTarjetas ? 'act' : '') + '">Tarjetas</button><button data-act="vista" data-v="l" class="' + (vistaTarjetas ? '' : 'act') + '">Lista</button></div></div><div id="lista"><div class="rejilla"><div class="esq"></div><div class="esq"></div><div class="esq"></div></div></div>';
+  $('app').innerHTML = '<div class="kpis" id="kpis"></div><div id="curso"></div><div class="fila sep" style="margin-bottom:14px"><div class="fila"><button class="btn ambar" data-act="nuevoCliente">' + ic('plus') + ' Nuevo cliente</button></div><div class="filtros" id="vt"><button data-act="vista" data-v="t" class="' + (vistaTarjetas ? 'act' : '') + '">Tarjetas</button><button data-act="vista" data-v="l" class="' + (vistaTarjetas ? '' : 'act') + '">Lista</button></div></div><div id="lista">' + pantallaCarga('Cargando clientes…') + '</div>';
   await cargarClientes();
   temporizador = setInterval(function () { if (!pila.length) { cargarKpis(); } }, 8000);
 }
@@ -404,14 +445,19 @@ function pintarClientes() {
 
 async function nuevoCliente() {
   var clave = await pedirClave('Agregar cliente'); if (clave === null) return;
-  var bases = await ejecutar(function () { return api('bases_nombres'); }); if (!bases) return;
+  var cerrarCarga = cargandoModal('Preparando el formulario…'), bases;
+  try { bases = await ejecutar(function () { return api('bases_nombres'); }); } finally { cerrarCarga(); }
+  if (!bases) return;
   if (!bases.length) return alerta('Primero registra una base de MyGeotab en «Credenciales».');
   formCliente(null, bases, clave);
 }
 async function editarCliente(id) {
   var clave = await pedirClave('Editar cliente'); if (clave === null) return;
-  var bases = await ejecutar(function () { return api('bases_nombres'); }); if (!bases) return;
-  var d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+  var cerrarCarga = cargandoModal('Cargando datos del cliente…'), bases, d;
+  try {
+    bases = await ejecutar(function () { return api('bases_nombres'); }); if (!bases) return;
+    d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+  } finally { cerrarCarga(); }
   formCliente(d, bases, clave);
 }
 function formCliente(d, bases, clave) {
@@ -434,24 +480,27 @@ function formCliente(d, bases, clave) {
     '<div><label>Bandas velocidad máx. (4 valores) · vacío = ' + esc(df.bandas_velmax || '') + '</label><input id="c_bv" value="' + esc(f.bandas_velmax) + '"></div></div>' +
     '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="c_ok">Guardar</button></div>';
   var m = abrirModal(h, 'medio');
-  m.querySelector('#c_ok').onclick = async function () {
+  m.querySelector('#c_ok').onclick = conRuedaFn(async function () {
     var g = function (i) { return m.querySelector('#' + i).value; };
     var cl = { nombre_titulo: g('c_nt'), razon_social: g('c_rs'), base_id: g('c_base'), grupo_id: g('c_gr'), periodos: g('c_per'), destinatarios_para: g('c_para'), destinatarios_cc: g('c_cc'),
       asunto: g('c_asu'), cuerpo: g('c_cue'), rend_max: g('c_rmax'), rend_min: g('c_rmin'), bandas_eventos: g('c_be'), bandas_velmax: g('c_bv') };
     if (d) cl.estado = g('c_est');
     var r = await ejecutar(function () { return d ? api('cliente_editar', { id: c.id, cliente: cl }, clave) : api('cliente_crear', { cliente: cl }, clave); });
     if (r) { cerrarModal(); toast(d ? 'Cliente actualizado' : 'Cliente creado con su carpeta y su hoja de datos. Ahora entra a «Unidades» y pulsa «Actualizar unidades».', 'ok'); cargarClientes(); }
-  };
+  });
 }
 
 /* ---------- unidades (todo con contraseña) ---------- */
 var uCtx = { id: null, clave: null, perfiles: [], unidades: [], filtro: 'TODAS', texto: '' };
 async function abrirUnidades(id) {
   var clave = await pedirClave('Unidades del cliente'); if (clave === null) return;
-  var perf = await ejecutar(function () { return api('perfiles_listar'); }); if (!perf) return;
-  var rg = await ejecutar(function () { return api('reglas_listar'); }); if (!rg) return;
-  var dg = await ejecutar(function () { return api('diagnosticos_listar'); }); if (!dg) return;
-  var d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+  var cerrarCarga = cargandoModal('Cargando unidades…'), perf, rg, dg, d;
+  try {
+    perf = await ejecutar(function () { return api('perfiles_listar'); }); if (!perf) return;
+    rg = await ejecutar(function () { return api('reglas_listar'); }); if (!rg) return;
+    dg = await ejecutar(function () { return api('diagnosticos_listar'); }); if (!dg) return;
+    d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+  } finally { cerrarCarga(); }
   uCtx = { id: id, clave: clave, nombre: d.cliente.nombre_titulo, perfiles: perf.perfiles.map(function (p) { return p.perfil; }), perfilesFull: perf.perfiles, reglas: rg.reglas, roles: rg.roles, diag: dg.diagnosticos, unidades: d.unidades, filtro: 'TODAS', texto: '' };
   pintarUnidades(true);
 }
@@ -480,11 +529,11 @@ function pintarUnidades(nuevo) {
   m.dataset.fijo = '1';
   m.querySelector('#u_txt').oninput = function () { leerUnidadesPantalla(m); uCtx.texto = this.value; var pos = this.value.length; pintarUnidades(false); var t = document.getElementById('u_txt'); t.focus(); t.setSelectionRange(pos, pos); };
   m.querySelector('#u_todos').onchange = function (e) { m.querySelectorAll('.u_sel').forEach(function (c) { c.checked = e.target.checked; }); };
-  m.querySelector('#u_act').onclick = async function () {
+  m.querySelector('#u_act').onclick = conRuedaFn(async function () {
     leerUnidadesPantalla(m);
     var r = await ejecutar(function () { return api('unidades_actualizar', { cliente_id: uCtx.id }, uCtx.clave); }); if (!r) return;
     uCtx.unidades = r.unidades; toast(r.nuevas + ' nuevas · ' + r.inactivadas + ' inactivadas · ' + r.reactivadas + ' reactivadas', 'ok'); pintarUnidades(false);
-  };
+  });
   m.querySelector('#u_apl').onclick = function () {
     var p = m.querySelector('#u_perfil').value, c = m.querySelector('#u_comb').value, e = m.querySelector('#u_est').value, k = 0;
     m.querySelectorAll('tr[data-i]').forEach(function (tr) {
@@ -493,11 +542,11 @@ function pintarUnidades(nuevo) {
     });
     toast(k ? 'Aplicado a ' + k + ' unidades. Pulsa «Guardar cambios».' : 'Marca primero las unidades.');
   };
-  m.querySelector('#u_gua').onclick = async function () {
+  m.querySelector('#u_gua').onclick = conRuedaFn(async function () {
     leerUnidadesPantalla(m);
     var r = await ejecutar(function () { return api('unidades_guardar', { cliente_id: uCtx.id, unidades: uCtx.unidades }, uCtx.clave); }, 'Unidades guardadas. Si hay informes en curso de este cliente, usa «Traer todo de nuevo» para que tomen el cambio.');
     if (r) { uCtx.unidades = r; cerrarModal(); cargarClientes(); }
-  };
+  });
 }
 function leerUnidadesPantalla(m) {
   m.querySelectorAll('tr[data-i]').forEach(function (tr) {
@@ -587,11 +636,11 @@ async function emisionManual(clienteId, nombre) {
       (ya ? '<div class="msg aviso" style="margin:8px 0 0">Ya existe una emisión de este periodo (estado ' + esc(ya.estado) + '). Si la creas de nuevo no se duplica: se abre la existente.</div>' : '');
   }
   tipoSel.onchange = llenar; perSel.onchange = mostrar; llenar();
-  ok.onclick = async function () {
+  ok.onclick = conRuedaFn(async function () {
     var p = perSel._ps[Number(perSel.value)]; if (!p) return;
     var r = await ejecutar(function () { return api('emision_crear', { cliente_id: clienteId, tipo: tipoSel.value, anio: p.a, mes: p.m }); });
     if (r) { cerrarModal(); toast(r.mensaje, 'ok'); ir('emisiones'); }
-  };
+  });
 }
 
 /* =============================== EMISIONES =============================== */
@@ -599,7 +648,7 @@ var filtro = { q: '', estado: '' }, listaEmi = [];
 var ESTADOS = [['', 'Todos'], ['EN_COLA', 'En cola'], ['EXTRAYENDO', 'Extrayendo'], ['RETENIDO', 'Retenidos'], ['LISTO', 'Listos'], ['ENVIANDO', 'Enviando'], ['ENVIADO', 'Enviados']];
 var CLASE = { ENVIADO: 'ok', LISTO: 'aviso', RETENIDO: 'mal', EN_COLA: 'azul pulso', EXTRAYENDO: 'azul pulso', ENVIANDO: 'azul pulso' };
 async function vistaEmisiones() {
-  $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="filtros" id="filtros"></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista"><div class="esq"></div></div>';
+  $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="filtros" id="filtros"></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista">' + pantallaCarga('Cargando emisiones…') + '</div>';
   await cargarEmisiones();
   temporizador = setInterval(function () { if (!pila.length) cargarEmisiones(true); }, 6000);
 }
@@ -625,7 +674,7 @@ async function cargarEmisiones(silencioso) {
 var emActual = null, emTimer = null;
 async function detalleEmision(id) {
   emActual = id; clearInterval(emTimer);
-  var m = abrirModal('<div id="det"><div class="esq"></div></div>');
+  var m = abrirModal('<div id="det">' + pantallaCarga('Cargando emisión…') + '</div>');
   async function pintar(forzar) {
     var det = document.getElementById('det'); if (!det) { clearInterval(emTimer); return; }
     var d; try { d = await api('emision_get', { id: id }); } catch (e) { det.innerHTML = '<div class="msg mal">' + esc(e.message) + '</div>'; return; }
@@ -710,7 +759,7 @@ async function vistaCredenciales() {
   var clave = await pedirClave('Administrador de credenciales');
   if (clave === null) { ir('clientes'); return; }
   adminClave = clave;
-  $('app').innerHTML = '<div class="fila" style="margin-bottom:14px"><button class="btn ambar" data-act="formBase">' + ic('plus') + ' Nueva base</button><span class="peq">Las credenciales se guardan sin cifrar en la hoja BASES. No compartas ese Sheet.</span></div><div id="lista"><div class="esq"></div></div>';
+  $('app').innerHTML = '<div class="fila" style="margin-bottom:14px"><button class="btn ambar" data-act="formBase">' + ic('plus') + ' Nueva base</button><span class="peq">Las credenciales se guardan sin cifrar en la hoja BASES. No compartas ese Sheet.</span></div><div id="lista">' + pantallaCarga('Cargando credenciales…') + '</div>';
   var l = await ejecutar(function () { return api('admin_bases_listar', {}, adminClave); });
   if (!l) { adminClave = null; ir('clientes'); return; }
   cache.basesAdm = l; renderBases(l);
@@ -730,11 +779,11 @@ function formBase(i) {
     '<div><label>Estado</label><select id="b_e"><option' + (b.estado !== 'INACTIVA' ? ' selected' : '') + '>ACTIVA</option><option' + (b.estado === 'INACTIVA' ? ' selected' : '') + '>INACTIVA</option></select></div></div>' +
     '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="b_ok">Guardar</button></div>';
   var m = abrirModal(h, 'medio');
-  m.querySelector('#b_ok').onclick = async function () {
+  m.querySelector('#b_ok').onclick = conRuedaFn(async function () {
     var g = function (x) { return m.querySelector('#' + x).value; };
     var r = await ejecutar(function () { return api('admin_base_guardar', { base: { id: b.id, nombre: g('b_n'), servidor: g('b_s'), base_datos: g('b_d'), usuario: g('b_u'), contrasena: g('b_p'), estado: g('b_e') } }, adminClave); }, 'Guardado');
     if (r) { cerrarModal(); recargarBases(); }
-  };
+  });
 }
 async function recargarBases() { var l = await ejecutar(function () { return api('admin_bases_listar', {}, adminClave); }); if (l) { cache.basesAdm = l; renderBases(l); } }
 
@@ -745,7 +794,7 @@ async function vistaReglas(conservarClave) {
     if (clave === null) { ir('clientes'); return; }
     adminClave = clave;
   }
-  $('app').innerHTML = '<div class="esq"></div>';
+  $('app').innerHTML = pantallaCarga('Cargando reglas…');
   var rg = await ejecutar(function () { return api('reglas_listar'); });
   var pf = await ejecutar(function () { return api('perfiles_listar'); });
   var dg = await ejecutar(function () { return api('diagnosticos_listar'); });
@@ -763,11 +812,11 @@ async function vistaReglas(conservarClave) {
 function formRegla(i) {
   var r = i === undefined ? {} : cache.reglas.reglas[i];
   var m = abrirModal('<h3>' + (i === undefined ? 'Nueva regla' : 'Editar regla') + '</h3><label>Id de la regla en MyGeotab</label><input style="width:100%" id="r_id" value="' + esc(r.id_regla) + '"' + (i === undefined ? '' : ' disabled') + '><label>Nombre</label><input style="width:100%" id="r_n" value="' + esc(r.nombre) + '"><label>Categoría</label><input style="width:100%" id="r_c" value="' + esc(r.categoria) + '"><label>Rol</label><select id="r_r">' + cache.reglas.roles.map(function (x) { return '<option' + (x === r.rol ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('') + '</select><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="r_ok">Guardar</button></div>', 'chico');
-  m.querySelector('#r_ok').onclick = async function () {
+  m.querySelector('#r_ok').onclick = conRuedaFn(async function () {
     var g = function (x) { return m.querySelector('#' + x).value; };
     var o = await ejecutar(function () { return api('regla_guardar', { regla: { id_regla: g('r_id'), nombre: g('r_n'), categoria: g('r_c'), rol: g('r_r') } }, adminClave); }, 'Regla guardada');
-    if (o) { cerrarModal(); vistaReglas(true); }
-  };
+    if (o) { cerrarModal(); await vistaReglas(true); }
+  });
 }
 function formPerfil(i) {
   var p = i === undefined ? {} : cache.perfiles.perfiles[i], pf = cache.perfiles;
@@ -776,12 +825,12 @@ function formPerfil(i) {
       var cand = pf.reglas.filter(function (x) { return x.rol === r; });
       return '<div><label>' + esc(r) + '</label><select data-r="' + esc(r) + '"><option value="">— ninguna —</option>' + cand.map(function (x) { return '<option value="' + esc(x.id_regla) + '"' + (x.id_regla === p[r] ? ' selected' : '') + '>' + esc(x.nombre) + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="p_ok">Guardar</button></div>', 'medio');
-  m.querySelector('#p_ok').onclick = async function () {
+  m.querySelector('#p_ok').onclick = conRuedaFn(async function () {
     var o = { perfil: m.querySelector('#p_n').value };
     m.querySelectorAll('select[data-r]').forEach(function (s) { o[s.getAttribute('data-r')] = s.value; });
     var r = await ejecutar(function () { return api('perfil_guardar', { perfil: o }, adminClave); }, 'Perfil guardado');
-    if (r) { cerrarModal(); vistaReglas(true); }
-  };
+    if (r) { cerrarModal(); await vistaReglas(true); }
+  });
 }
 
 /* =============================== CONFIGURACIÓN =============================== */
@@ -789,7 +838,7 @@ async function vistaConfig() {
   var clave = await claveVerificada('Configuración: contraseña de administrador');
   if (clave === null) { ir('clientes'); return; }
   adminClave = clave;
-  $('app').innerHTML = '<div class="esq"></div>';
+  $('app').innerHTML = pantallaCarga('Cargando configuración…');
   var c = await ejecutar(function () { return api('config_get'); }); if (!c) { adminClave = null; ir('clientes'); return; }
   $('app').innerHTML = '<div class="tarjeta"><h2>Cortes y horario</h2><div class="cols">' +
     '<div><label>Día del informe QUINCENAL (1 al 15 del mes)</label><input id="k_dq" type="number" min="1" max="28" value="' + esc(c.DIA_QUINCENAL) + '"></div>' +
@@ -803,10 +852,10 @@ async function vistaConfig() {
     '<div class="tarjeta"><h2>Correo por defecto</h2><label>Asunto (variables {CLIENTE} {TIPO} {PERIODO})</label><input style="width:100%" id="k_as" value="' + esc(c.ASUNTO) + '">' +
     '<label>Texto del correo</label><textarea id="k_cu">' + esc(c.CUERPO) + '</textarea></div>' +
     '<div class="fila"><button class="btn verde" id="k_ok">Guardar configuración</button><span class="peq">Se pidió la contraseña al entrar; si cambias de sección volverá a pedirla.</span></div>';
-  $('k_ok').onclick = async function () {
+  $('k_ok').onclick = conRuedaFn(async function () {
     var g = function (x) { return $(x).value; };
     await ejecutar(function () { return api('config_set', { config: { DIA_QUINCENAL: g('k_dq'), DIA_MENSUAL: g('k_dm'), HORA_EJECUCION: g('k_h'), REND_MAX: g('k_rx'), REND_MIN: g('k_rn'), BANDAS_EVENTOS: g('k_be'), BANDAS_VELMAX: g('k_bv'), ASUNTO: g('k_as'), CUERPO: g('k_cu') } }, adminClave); }, 'Configuración guardada');
-  };
+  });
 }
 
 
@@ -881,20 +930,20 @@ function vistaGuia() {
 var ACT = {
   gTab: function (d) { GUIA_TAB = d.t; vistaGuia(); },
   gChk: function (d, b) { var h = leerHechos(); h[d.k] = b.checked; hechosMem[d.k] = b.checked; guardarLocal('guiaHechos', JSON.stringify(h)); vistaGuia(); },
-  ir: function (d) { cerrarCajon(); ir(d.s); },
+  ir: function (d) { cerrarCajon(); return ir(d.s); },
   menu: function () { $('lado').classList.toggle('abierto'); },
-  avisos: function () { var c = $('cajon'); c.classList.toggle('abierto'); if (c.classList.contains('abierto')) { refrescarAvisos().then(pintarAvisos); pintarAvisos(); } },
+  avisos: function () { var c = $('cajon'); c.classList.toggle('abierto'); if (c.classList.contains('abierto')) { pintarAvisos(); return refrescarAvisos().then(pintarAvisos); } },
   cerrar: function () { cerrarModal(); },
   vista: function (d) { vistaTarjetas = d.v === 't'; guardarLocal('vista', vistaTarjetas ? 'tarjetas' : 'tabla'); document.querySelectorAll('#vt button').forEach(function (b) { b.classList.toggle('act', b.dataset.v === d.v); }); pintarClientes(); },
-  nuevoCliente: nuevoCliente,
-  editarCliente: function (d) { editarCliente(d.id); },
-  unidades: function (d) { abrirUnidades(d.id); },
-  emiManual: function (d) { emisionManual(d.id, d.n); },
+  nuevoCliente: function () { return nuevoCliente(); },
+  editarCliente: function (d) { return editarCliente(d.id); },
+  unidades: function (d) { return abrirUnidades(d.id); },
+  emiManual: function (d) { return emisionManual(d.id, d.n); },
   uFiltro: function (d) { var m = pila[pila.length - 1]; leerUnidadesPantalla(m); uCtx.filtro = d.f; pintarUnidades(false); },
   uAvanzado: function (d) { unidadAvanzada(Number(d.i)); },
-  actualizar: function () { cargarEmisiones(); },
-  fEstado: function (d) { filtro.estado = d.e; cargarEmisiones(true); },
-  verEmision: function (d) { cerrarCajon(); detalleEmision(d.id); },
+  actualizar: function () { return cargarEmisiones(); },
+  fEstado: function (d) { filtro.estado = d.e; return cargarEmisiones(true); },
+  verEmision: function (d) { cerrarCajon(); return detalleEmision(d.id); },
   reprocesar: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; if (!confirm('Se volverá a consultar MyGeotab, se validará y, si todo queda correcto, se enviará el PDF a ' + d.n + '. Si algo falla queda RETENIDO sin enviar. ¿Continuar?')) return; await ejecutar(function () { return api('emision_reintentar', { id: d.id, todo: true, auto: true }); }, 'Reproceso programado: se enviará solo si queda correcto'); repintarDetalle(); },
   emiAccion: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; await ejecutar(function () { return api(d.a, { id: d.id, todo: d.todo === '1' }); }, d.m); repintarDetalle(); },
   emiTodo: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; if (!confirm('¿Traer todo de nuevo? Se descartan los datos extraídos (no las correcciones manuales).')) return; await ejecutar(function () { return api('emision_reintentar', { id: d.id, todo: true }); }, 'Se traerá todo de nuevo'); repintarDetalle(); },
@@ -913,12 +962,15 @@ var ACT = {
   borrarRegla: async function (d) { var r = cache.reglas.reglas[Number(d.i)]; if (!confirm('¿Quitar la regla «' + r.nombre + '»?')) return; var o = await ejecutar(function () { return api('regla_eliminar', { id_regla: r.id_regla }, adminClave); }, 'Regla quitada'); if (o) vistaReglas(true); },
   formPerfil: function (d) { formPerfil(d.i === undefined ? undefined : Number(d.i)); },
   borrarPerfil: async function (d) { var p = cache.perfiles.perfiles[Number(d.i)]; if (!confirm('¿Quitar el perfil «' + p.perfil + '»?')) return; var o = await ejecutar(function () { return api('perfil_eliminar', { perfil: p.perfil }, adminClave); }, 'Perfil quitado'); if (o) vistaReglas(true); },
-  guardarDiag: function (d, b) { var tr = b.closest('tr'); ejecutar(function () { return api('diagnostico_guardar', { diagnostico: { clave: tr.getAttribute('data-k'), id_diagnostico: tr.querySelector('.d_id').value, unidad_origen: tr.querySelector('.d_un').value } }, adminClave); }, 'Diagnóstico guardado'); }
+  guardarDiag: function (d, b) { var tr = b.closest('tr'); return ejecutar(function () { return api('diagnostico_guardar', { diagnostico: { clave: tr.getAttribute('data-k'), id_diagnostico: tr.querySelector('.d_id').value, unidad_origen: tr.querySelector('.d_un').value } }, adminClave); }, 'Diagnóstico guardado'); }
 };
 function cerrarCajon() { $('cajon').classList.remove('abierto'); }
 document.addEventListener('click', function (e) {
   var b = e.target.closest('[data-act]'); if (!b) return;
-  var f = ACT[b.dataset.act]; if (f) { e.preventDefault(); f(b.dataset, b, e); }
+  var f = ACT[b.dataset.act]; if (!f) return;
+  e.preventDefault();
+  if (b.classList.contains('cargando')) return;   // ya está trabajando: evita el doble clic
+  lanzar(b, function () { return f(b.dataset, b, e); });
 });
 $('q').addEventListener('input', function () {
   if (seccion === 'clientes') pintarClientes();
