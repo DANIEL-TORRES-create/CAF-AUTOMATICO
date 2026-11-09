@@ -202,7 +202,7 @@ tr:last-child td{border-bottom:0}
 /* =====================================================================
    CONFIGURACIÓN: pega aquí la URL de la aplicación web (termina en /exec)
    ===================================================================== */
-var URL_API = 'https://script.google.com/macros/s/AKfycbyQ9BDGpHYLnyAZXgNQs1HhB9OTTXP9NTr62fiSMXGWKkWLg1ly8bELZ8c1PSZJ340Erg/exec';
+var URL_API = 'PEGA_AQUI_LA_URL_EXEC';
 /* ===================================================================== */
 
 /* ---------- utilidades ---------- */
@@ -410,7 +410,7 @@ async function cargarKpis() {
       var e = t.activas[i], pr = null;
       try { pr = (await api('emision_get', { id: e.id })).progreso; } catch (x) {}
       var pct = pr && pr.metricasTotal ? Math.round(100 * pr.metricasOk / pr.metricasTotal) : 0;
-      html += '<div class="tarjeta" style="padding:12px 16px"><div class="fila sep"><b>' + esc(e.cliente) + ' <span class="peq">· ' + esc(e.tipo) + ' ' + esc(e.periodo_desde) + '</span></b><span class="chip azul pulso">Extrayendo ' + pct + '%</span></div><div class="progreso anim" style="margin-top:8px"><div style="width:' + pct + '%"></div></div><div class="peq" style="margin-top:4px">' + (pr ? pr.unidadesCompletas + ' de ' + pr.unidades + ' unidades · ' + pr.metricasOk + ' de ' + pr.metricasTotal + ' métricas' : '') + '</div></div>';
+      html += '<div class="tarjeta" style="padding:12px 16px"><div class="fila sep"><b>' + esc(e.cliente) + ' <span class="peq">· ' + esc(textoEmision(e.periodo_desde, e.tipo)) + '</span></b><span class="chip azul pulso">Extrayendo ' + pct + '%</span></div><div class="progreso anim" style="margin-top:8px"><div style="width:' + pct + '%"></div></div><div class="peq" style="margin-top:4px">' + (pr ? pr.unidadesCompletas + ' de ' + pr.unidades + ' unidades · ' + pr.metricasOk + ' de ' + pr.metricasTotal + ' métricas' : '') + '</div></div>';
     }
     if ($('curso') && $('curso').dataset.v !== html) { $('curso').dataset.v = html; $('curso').innerHTML = html; }
   } catch (e) {}
@@ -431,13 +431,13 @@ function pintarClientes() {
       return '<div class="cli' + (c.estado !== 'ACTIVO' ? '' : '') + '" style="animation-delay:' + (i * 40) + 'ms"><div class="fila"><div class="avatar" style="background:' + colorDe(c.nombre_titulo) + '">' + esc(iniciales(c.nombre_titulo)) + '</div><div style="min-width:0"><h3>' + esc(c.nombre_titulo) + '</h3><div class="sub">' + esc(c.razon_social) + '</div></div><span class="chip ' + (c.estado === 'ACTIVO' ? 'ok' : '') + '" style="margin-left:auto">' + esc(c.estado) + '</span></div>' +
         '<div><div class="dato"><span>' + ic('truck') + ' Unidades</span><b>' + c.unidades_activas + ' activas' + (c.unidades_pendientes ? ' · <span style="color:var(--aviso)">' + c.unidades_pendientes + ' pendientes</span>' : '') + '</b></div><div class="barra-u" style="margin-top:6px"><i style="width:' + (100 * c.unidades_activas / tot) + '%;background:var(--ok)"></i><i style="width:' + (100 * c.unidades_pendientes / tot) + '%;background:var(--ambar)"></i></div></div>' +
         '<div class="dato"><span>Próximo corte</span><b>' + esc(c.proximo_corte) + '</b></div>' +
-        '<div class="dato"><span>Última emisión</span><b>' + (c.ultima_emision ? '<span class="vivo" style="gap:6px;display:inline-flex;align-items:center">' + checkHtml() + ' ' + esc(c.ultima_emision) + '</span>' : '—') + '</b></div>' +
+        '<div class="dato"><span>Última emisión</span><b>' + (c.ultima_emision ? '<span class="vivo" style="gap:6px;display:inline-flex;align-items:center">' + checkHtml() + ' ' + esc(textoEmision(c.ultima_emision)) + '</span>' : '—') + '</b></div>' +
         (c.en_curso ? '<span class="chip azul pulso">' + c.en_curso + ' informe(s) en curso</span>' : '') +
         '<div class="acciones"><button class="btn chico" data-act="unidades" data-id="' + esc(c.id) + '">Unidades</button><button class="btn chico sec" data-act="emiManual" data-id="' + esc(c.id) + '" data-n="' + esc(c.nombre_titulo) + '">Nueva emisión</button><button class="btn chico sec" data-act="editarCliente" data-id="' + esc(c.id) + '">Editar</button><a class="btn chico sec" target="_blank" rel="noopener" href="' + esc(c.carpeta_url) + '">Carpeta</a></div></div>';
     }).join('') + '</div>';
   } else {
     $('lista').innerHTML = '<div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th>Unidades</th><th>Próximo corte</th><th>Última emisión</th><th>Estado</th><th></th></tr></thead><tbody>' + l.map(function (c) {
-      return '<tr><td><b>' + esc(c.nombre_titulo) + '</b><br><span class="peq">' + esc(c.razon_social) + '</span></td><td>' + c.unidades_activas + ' activas' + (c.unidades_pendientes ? ' <span class="chip aviso">' + c.unidades_pendientes + ' pend.</span>' : '') + '</td><td>' + esc(c.proximo_corte) + '</td><td>' + (c.ultima_emision ? checkHtml() + ' ' + esc(c.ultima_emision) : '—') + '</td><td><span class="chip ' + (c.estado === 'ACTIVO' ? 'ok' : '') + '">' + esc(c.estado) + '</span>' + (c.en_curso ? ' <span class="chip azul pulso">en curso</span>' : '') + '</td>' +
+      return '<tr><td><b>' + esc(c.nombre_titulo) + '</b><br><span class="peq">' + esc(c.razon_social) + '</span></td><td>' + c.unidades_activas + ' activas' + (c.unidades_pendientes ? ' <span class="chip aviso">' + c.unidades_pendientes + ' pend.</span>' : '') + '</td><td>' + esc(c.proximo_corte) + '</td><td>' + (c.ultima_emision ? checkHtml() + ' ' + esc(textoEmision(c.ultima_emision)) : '—') + '</td><td><span class="chip ' + (c.estado === 'ACTIVO' ? 'ok' : '') + '">' + esc(c.estado) + '</span>' + (c.en_curso ? ' <span class="chip azul pulso">en curso</span>' : '') + '</td>' +
         '<td style="white-space:nowrap"><button class="btn chico" data-act="unidades" data-id="' + esc(c.id) + '">Unidades</button> <button class="btn chico sec" data-act="emiManual" data-id="' + esc(c.id) + '" data-n="' + esc(c.nombre_titulo) + '">Nueva emisión</button> <button class="btn chico sec" data-act="editarCliente" data-id="' + esc(c.id) + '">Editar</button></td></tr>';
     }).join('') + '</tbody></table></div>';
   }
@@ -611,6 +611,17 @@ function periodosCerrados(tipo) {
     m--; if (m === 0) { m = 12; a--; }
   }
   return lista;
+}
+/* Periodo legible: "01–31 oct 2026 (mensual)" / "01–15 nov 2026 (quincenal)". Recibe "2026-10-01 (MENSUAL)" o (desde, tipo). */
+function textoEmision(txt, tipo) {
+  var d = String(txt || ''), t = tipo;
+  var m = d.match(/^(\d{4})-(\d{2})-(\d{2})(?:\s*\((\w+)\))?/);
+  if (!m) return d;
+  t = String(t || m[4] || '').toUpperCase();
+  var a = Number(m[1]), mes = Number(m[2]);
+  var fin = t === 'QUINCENAL' ? 15 : new Date(a, mes, 0).getDate();
+  var cortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  return '01–' + (fin < 10 ? '0' : '') + fin + ' ' + cortos[mes - 1] + ' ' + a + (t ? ' (' + t.toLowerCase() + ')' : '');
 }
 function textoPeriodo(p) { return '01 al ' + (p.hasta < 10 ? '0' : '') + p.hasta + ' de ' + MESES[p.m - 1] + ' del ' + p.a; }
 async function emisionManual(clienteId, nombre) {
