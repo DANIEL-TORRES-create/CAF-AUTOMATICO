@@ -266,7 +266,7 @@ async function api(accion, datos, clave) {
 var TEXTO_CARGA = { u_gua: 'Guardando…', c_ok: 'Guardando…', b_ok: 'Guardando…', r_ok: 'Guardando…', p_ok: 'Guardando…', k_ok: 'Guardando…', e_ok: 'Creando…', o_ok: 'Aceptando…', u_act: 'Consultando MyGeotab…', u_apl: 'Aplicando…',
   generar: 'Generando vista previa…', enviar: 'Enviando…', reprocesar: 'Programando…', corregir: 'Guardando…', obs: 'Guardando…', guardarDiag: 'Guardando…', actualizar: 'Actualizando…', restaurar: 'Quitando…',
   emiAccion: 'Procesando…', emiTodo: 'Programando…', envioSi: 'Confirmando…', envioNo: 'Confirmando…', crearAviso: 'Creando…', borrarBase: 'Eliminando…', borrarRegla: 'Quitando…', borrarPerfil: 'Quitando…',
-  nuevoCliente: 'Abriendo…', editarCliente: 'Cargando…', unidades: 'Cargando…', emiManual: 'Cargando…', formBase: 'Abriendo…' };
+  m_pgu: 'Guardando…', m_rev: 'Consultando MyGeotab…', alterna: 'Programando…', k_est: 'Actualizando…', nuevoCliente: 'Abriendo…', editarCliente: 'Cargando…', unidades: 'Cargando…', emiManual: 'Cargando…', formBase: 'Abriendo…' };
 var tareaActual = null;
 function rueda(grande) { return '<span class="rueda' + (grande ? ' grande' : '') + '"></span>'; }
 function pantallaCarga(txt) { return '<div class="cargando-pantalla">' + rueda(true) + '<div>' + esc(txt || 'Cargando…') + '</div></div>'; }
@@ -473,20 +473,21 @@ async function editarCliente(id) {
 }
 function formCliente(d, bases, clave) {
   var c = d ? d.cliente : {}, f = d ? d.config : {}, df = d ? d.defecto : {};
-  var per = String(f.periodos || 'QUINCENAL,MENSUAL').toUpperCase();
+  var per = ['SEMANAL', 'QUINCENAL', 'MENSUAL'].filter(function (t) { return String(f.periodos || 'QUINCENAL,MENSUAL').toUpperCase().indexOf(t) >= 0; }).join(',') || 'QUINCENAL,MENSUAL';
+  var perOpc = [['QUINCENAL,MENSUAL', 'Quincenal y mensual (como siempre)'], ['SEMANAL', 'Solo semanal'], ['QUINCENAL', 'Solo quincenal'], ['MENSUAL', 'Solo mensual'], ['SEMANAL,MENSUAL', 'Semanal y mensual']];
   var h = '<h3>' + (d ? 'Editar cliente' : 'Nuevo cliente') + '</h3><div class="cols">' +
     '<div><label>Nombre / título del informe</label><input id="c_nt" value="' + esc(c.nombre_titulo) + '"></div>' +
     '<div><label>Razón social (nombre del PDF)</label><input id="c_rs" value="' + esc(c.razon_social) + '"></div>' +
     '<div><label>Base de MyGeotab</label><select id="c_base">' + bases.map(function (b) { return '<option value="' + esc(b.id) + '"' + (b.id === c.base_id ? ' selected' : '') + '>' + esc(b.nombre) + '</option>'; }).join('') + '</select></div>' +
     '<div><label>Id del grupo en MyGeotab</label><input id="c_gr" value="' + esc(c.grupo_id) + '"></div>' +
-    '<div><label>Informes que recibe</label><select id="c_per"><option value="QUINCENAL,MENSUAL"' + (per === 'QUINCENAL,MENSUAL' ? ' selected' : '') + '>Quincenal y mensual</option><option value="QUINCENAL"' + (per === 'QUINCENAL' ? ' selected' : '') + '>Solo quincenal</option><option value="MENSUAL"' + (per === 'MENSUAL' ? ' selected' : '') + '>Solo mensual</option></select></div>' +
+    '<div><label>Informes que recibe</label><select id="c_per">' + perOpc.map(function (o) { return '<option value="' + o[0] + '"' + (per === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select><div class="peq" style="margin-top:4px">Semanal = lunes a domingo de la semana anterior (sale el día configurado en Configuración). Semanal y quincenal no se combinan.</div></div>' +
     (d ? '<div><label>Estado</label><select id="c_est"><option' + (c.estado === 'ACTIVO' ? ' selected' : '') + '>ACTIVO</option><option' + (c.estado === 'INACTIVO' ? ' selected' : '') + '>INACTIVO</option></select></div>' : '') +
     '</div><label>Para (correos separados por coma)</label><input style="width:100%" id="c_para" value="' + esc(f.destinatarios_para) + '">' +
     '<label>Cc (opcional)</label><input style="width:100%" id="c_cc" value="' + esc(f.destinatarios_cc) + '">' +
     '<label>Asunto (variables {CLIENTE} {TIPO} {PERIODO}). Vacío = usa el de Configuración</label><input style="width:100%" id="c_asu" value="' + esc(f.asunto) + '" placeholder="' + esc(df.asunto || '') + '">' +
     '<label>Texto del correo. Vacío = usa el de Configuración</label><textarea id="c_cue" placeholder="' + esc(df.cuerpo || '') + '">' + esc(f.cuerpo) + '</textarea>' +
-    '<div class="cols"><div><label>Rendimiento máximo (km/gal) · vacío = ' + esc(df.rend_max || '') + '</label><input id="c_rmax" value="' + esc(f.rend_max) + '"></div>' +
-    '<div><label>Rendimiento mínimo (km/gal) · vacío = ' + esc(df.rend_min || '') + '</label><input id="c_rmin" value="' + esc(f.rend_min) + '"></div>' +
+    '<div class="cols"><div><label>Rendimiento máximo diésel (km/gal) · vacío = ' + esc(df.rend_max || '') + '</label><input id="c_rmax" value="' + esc(f.rend_max) + '"></div>' +
+    '<div><label>Rendimiento mínimo diésel (km/gal) · vacío = ' + esc(df.rend_min || '') + '</label><input id="c_rmin" value="' + esc(f.rend_min) + '"></div>' +
     '<div><label>Bandas de eventos (4 valores) · vacío = ' + esc(df.bandas_eventos || '') + '</label><input id="c_be" value="' + esc(f.bandas_eventos) + '"></div>' +
     '<div><label>Bandas velocidad máx. (4 valores) · vacío = ' + esc(df.bandas_velmax || '') + '</label><input id="c_bv" value="' + esc(f.bandas_velmax) + '"></div></div>' +
     '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="c_ok">Guardar</button></div>';
@@ -511,8 +512,9 @@ async function abrirUnidades(id) {
     rg = await ejecutar(function () { return api('reglas_listar'); }); if (!rg) return;
     dg = await ejecutar(function () { return api('diagnosticos_listar'); }); if (!dg) return;
     d = await ejecutar(function () { return api('cliente_get', { id: id }); }); if (!d) return;
+    var cg = await ejecutar(function () { return api('config_get'); }); window.__cfgRpm = (cg && cg.RPM_PERFILES) || '{}';
   } finally { cerrarCarga(); }
-  uCtx = { id: id, clave: clave, nombre: d.cliente.nombre_titulo, perfiles: perf.perfiles.map(function (p) { return p.perfil; }), perfilesFull: perf.perfiles, reglas: rg.reglas, roles: rg.roles, diag: dg.diagnosticos, unidades: d.unidades, filtro: 'TODAS', texto: '' };
+  uCtx = { id: id, clave: clave, nombre: d.cliente.nombre_titulo, perfiles: perf.perfiles.map(function (p) { return p.perfil; }), perfilesFull: perf.perfiles, reglas: rg.reglas, roles: rg.roles, diag: dg.diagnosticos, unidades: d.unidades, filtro: 'TODAS', texto: '', limite: Number(d.limite_unidades) || 20 };
   pintarUnidades(true);
 }
 function pintarUnidades(nuevo) {
@@ -520,20 +522,21 @@ function pintarUnidades(nuevo) {
   var cnt = { TODAS: u.length, ACTIVO: 0, PENDIENTE: 0, INACTIVO: 0 };
   u.forEach(function (x) { cnt[x.estado] = (cnt[x.estado] || 0) + 1; });
   var h = '<div class="fila sep"><h3 style="margin:0">Unidades · ' + esc(uCtx.nombre) + '</h3><button class="btn" id="u_act">Actualizar desde MyGeotab</button></div>' +
-    '<p class="peq">Las unidades nuevas entran como PENDIENTE y no se usan hasta activarlas con perfil y combustible. Una unidad INACTIVA deja de traer datos desde la próxima ejecución.</p>' +
+    '<p class="peq">Las unidades nuevas entran como PENDIENTE y no se usan hasta activarlas con su energía (diésel, gas o eléctrico) y, si tienen motor, su perfil. Una unidad INACTIVA deja de traer datos desde la próxima ejecución.</p>' +
+    (function () { var act = (cnt.ACTIVO || 0) + (cnt.PENDIENTE || 0), lim = uCtx.limite || 20; return '<div class="msg ' + (act > lim ? 'mal' : 'info') + '" style="margin:0 0 10px">Unidades activas (activas + pendientes): <b>' + act + ' de ' + lim + '</b>.' + (act > lim ? ' Supera el máximo por informe: inactiva las que no se vayan a informar hasta quedar en ' + lim + ' o menos, o trabaja este cliente con Power BI. No se podrá guardar mientras supere el máximo.' : ' Las inactivas no cuentan.') + '</div>'; })() +
     '<div class="fila sep" style="margin-bottom:10px"><div class="filtros">' + [['TODAS', 'Todas'], ['ACTIVO', 'Activas'], ['PENDIENTE', 'Pendientes'], ['INACTIVO', 'Inactivas']].map(function (f) { return '<button data-act="uFiltro" data-f="' + f[0] + '" class="' + (uCtx.filtro === f[0] ? 'act' : '') + '">' + f[1] + ' (' + (cnt[f[0]] || 0) + ')</button>'; }).join('') + '</div><input id="u_txt" placeholder="Buscar placa…" value="' + esc(uCtx.texto) + '" style="width:180px"></div>' +
-    '<div class="fila" style="margin-bottom:10px;padding:10px;background:var(--panel2);border-radius:10px"><b class="peq">Aplicar a las marcadas:</b><select id="u_perfil"><option value="">Perfil…</option>' + uCtx.perfiles.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select><select id="u_comb"><option value="">Combustible…</option><option>DIESEL</option><option>GAS</option></select><select id="u_est"><option value="">Estado…</option><option>ACTIVO</option><option>PENDIENTE</option><option>INACTIVO</option></select><button class="btn chico sec" id="u_apl">Aplicar</button></div>' +
-    '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th><input type="checkbox" id="u_todos"></th><th>Placa (la que se imprime)</th><th>MyGeotab</th><th>Perfil</th><th>Combustible</th><th>Estado</th><th>Rend. máx</th><th>Rend. mín</th><th></th></tr></thead><tbody>' +
+    '<div class="fila" style="margin-bottom:10px;padding:10px;background:var(--panel2);border-radius:10px"><b class="peq">Aplicar a las marcadas:</b><select id="u_perfil"><option value="">Perfil…</option>' + uCtx.perfiles.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select><select id="u_comb"><option value="">Energía…</option><option>DIESEL</option><option>GAS</option><option>ELECTRICO</option></select><select id="u_est"><option value="">Estado…</option><option>ACTIVO</option><option>PENDIENTE</option><option>INACTIVO</option></select><button class="btn chico sec" id="u_apl">Aplicar</button></div>' +
+    '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th><input type="checkbox" id="u_todos"></th><th>Placa (la que se imprime)</th><th>MyGeotab</th><th>Perfil</th><th>Energía</th><th>Estado</th><th>Rend. máx</th><th>Rend. mín</th><th></th></tr></thead><tbody>' +
     u.map(function (x, i) {
       if (uCtx.filtro !== 'TODAS' && x.estado !== uCtx.filtro) return '';
       if (uCtx.texto && (x.placa + ' ' + x.nombre_geotab).toLowerCase().indexOf(uCtx.texto.toLowerCase()) < 0) return '';
-      var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids;
+      var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids || x.origen || x.consumo_fuente || x.rpm_modo;
       return '<tr data-i="' + i + '"><td><input type="checkbox" class="u_sel"></td><td><input class="f_placa" size="9" value="' + esc(x.placa) + '"></td><td class="peq">' + esc(x.nombre_geotab) + '</td>' +
         '<td><select class="f_perfil"><option value=""></option>' + uCtx.perfiles.map(function (p) { return '<option' + (p === x.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select></td>' +
-        '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option></select></td>' +
+        '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option><option' + (x.combustible === 'ELECTRICO' ? ' selected' : '') + '>ELECTRICO</option></select></td>' +
         '<td><select class="f_est">' + ['ACTIVO', 'PENDIENTE', 'INACTIVO'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></td>' +
         '<td><input class="f_rmax" size="4" value="' + esc(x.rend_max) + '"></td><td><input class="f_rmin" size="4" value="' + esc(x.rend_min) + '"></td>' +
-        '<td><button class="btn chico ' + (avanzado ? '' : 'sec') + '" data-act="uAvanzado" data-i="' + i + '">' + (avanzado ? 'Avanzado ●' : 'Avanzado') + '</button></td></tr>';
+        '<td style="white-space:nowrap"><button class="btn chico ' + (avanzado ? '' : 'sec') + '" style="white-space:nowrap" data-act="uAvanzado" data-i="' + i + '">' + (avanzado ? 'Avanzado ●' : 'Avanzado') + '</button></td></tr>';
     }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button><button class="btn verde" id="u_gua">Guardar cambios</button></div>';
   if (!nuevo) cerrarModal();
   var m = abrirModal(h, 'ancho');
@@ -544,6 +547,7 @@ function pintarUnidades(nuevo) {
     leerUnidadesPantalla(m);
     var r = await ejecutar(function () { return api('unidades_actualizar', { cliente_id: uCtx.id }, uCtx.clave); }); if (!r) return;
     uCtx.unidades = r.unidades; toast(r.nuevas + ' nuevas · ' + r.inactivadas + ' inactivadas · ' + r.reactivadas + ' reactivadas', 'ok'); pintarUnidades(false);
+    if (r.excede) avisoLimite(r.mensaje);
   });
   m.querySelector('#u_apl').onclick = function () {
     var p = m.querySelector('#u_perfil').value, c = m.querySelector('#u_comb').value, e = m.querySelector('#u_est').value, k = 0;
@@ -559,6 +563,9 @@ function pintarUnidades(nuevo) {
     if (r) { uCtx.unidades = r; cerrarModal(); cargarClientes(); }
   });
 }
+function avisoLimite(msg) {
+  abrirModal('<h3>Supera el máximo de unidades por informe</h3><div class="msg aviso">' + esc(msg) + '</div><p class="peq">Las unidades ya quedaron en la lista como PENDIENTE. Inactiva las que no se vayan a informar y guarda. Con más de 20 unidades activas lo recomendable es trabajar este cliente con Power BI.</p><div class="pie-modal"><button class="btn" data-act="cerrar">Entendido</button></div>', 'chico');
+}
 function leerUnidadesPantalla(m) {
   m.querySelectorAll('tr[data-i]').forEach(function (tr) {
     var x = uCtx.unidades[Number(tr.getAttribute('data-i'))];
@@ -567,17 +574,52 @@ function leerUnidadesPantalla(m) {
   });
 }
 var ROL_TXT = { velocidad_mayor_80: 'Velocidad mayor a 80 km/h', aceleracion_brusca: 'Aceleración brusca', frenada_brusca: 'Frenada brusca', giro_brusco: 'Giro brusco', rpm_bajo: 'RPM · Rango bajo', rpm_economico: 'RPM · Rango económico', rpm_potencia: 'RPM · Rango potencia', sobrerrevolucion: 'Sobrerrevoluciones', ralenti_rpm: 'Ralentí (RPM)' };
-var VAR_TXT = { ODO: 'Odómetro (distancia)', COMB: 'Combustible', HMOT: 'Horas de motor', HRAL: 'Horas en ralentí', CRAL: 'Consumo en ralentí' };
+var VAR_TXT = { ODO: 'Odómetro (distancia)', COMB: 'Combustible', HMOT: 'Horas de motor', HRAL: 'Horas en ralentí', CRAL: 'Consumo en ralentí', COMB_ALT: 'Consumo · variable alterna', CRAL_ALT: 'Consumo en ralentí · variable alterna', E_MOV: 'Energía en movimiento', E_RAL: 'Energía en ralentí', E_REG: 'Energía regenerada', SOC: 'Estado de carga', IGN: 'Ignición', RPM: 'RPM del motor' };
+var BANDAS_TXT = [['ral', 'Ralentí'], ['bajo', 'Bajo torque'], ['eco', 'Económico (banda verde)'], ['pot', 'Potencia'], ['exc', 'Exceso de RPM']];
+function rangosVacios() { return { ral: { de: '', a: '', cond: 'AMBOS' }, bajo: { de: '', a: '', cond: 'AMBOS' }, eco: { de: '', a: '', cond: 'AMBOS' }, pot: { de: '', a: '', cond: 'AMBOS' }, exc: { de: '', cond: 'AMBOS' } }; }
+function validarRangosJs(r) {
+  var err = [], orden = ['ral', 'bajo', 'eco', 'pot'], prev = null, vacio = function (v) { return v === '' || v === undefined || v === null || isNaN(Number(v)); };
+  orden.forEach(function (k) {
+    var b = r[k]; if (!b || vacio(b.de) || vacio(b.a)) { err.push('Falta el rango «' + k + '».'); return; }
+    if (Number(b.a) <= Number(b.de)) err.push('En «' + k + '» el hasta debe ser mayor que el desde.');
+    if (prev !== null && Number(b.de) !== prev) err.push('«' + k + '» debe empezar donde termina el rango anterior (' + prev + ').');
+    prev = Number(b.a);
+  });
+  if (!r.exc || vacio(r.exc.de)) err.push('Falta el desde del exceso.'); else if (prev !== null && Number(r.exc.de) !== prev) err.push('El exceso debe empezar donde termina potencia (' + prev + ').');
+  return err;
+}
+async function revisarVariablesUnidad(x) {
+  var r = await ejecutar(function () { return api('variables_revisar', { cliente_id: uCtx.id, id_geotab: x.id_geotab, dias: 7 }); }); if (!r) return;
+  var f = function (t) { return t ? esc(fechaLima(t.t)) + ' · ' + n(t.v) : '—'; };
+  abrirModal('<h3>Variables de ' + esc(r.placa) + ' · últimos ' + r.dias + ' días</h3><p class="peq">Solo lectura: no cambia nada de la unidad ni de los informes. Sirve para saber qué variable trae datos antes de configurarla.</p><div class="tabla-wrap" style="max-height:50vh"><table><thead><tr><th>Variable</th><th>Estado</th><th>Lecturas</th><th>Primera</th><th>Última</th><th>Mín.</th><th>Máx.</th></tr></thead><tbody>' +
+    r.variables.map(function (v) { return '<tr><td><b>' + esc(VAR_TXT[v.clave] || v.etiqueta) + '</b><div class="peq">' + esc(v.id_diagnostico) + '</div></td><td><span class="chip ' + (v.estado === 'CON DATOS' ? 'ok' : (v.estado === 'ERROR' ? 'mal' : 'aviso')) + '">' + esc(v.estado) + '</span>' + (v.detalle ? '<div class="peq">' + esc(v.detalle) + '</div>' : '') + '</td><td>' + (v.n === undefined ? '—' : n(v.n) + (v.tope ? '+' : '')) + '</td><td class="peq">' + f(v.primero) + '</td><td class="peq">' + f(v.ultimo) + '</td><td>' + (v.min === undefined ? '—' : n(v.min)) + '</td><td>' + (v.max === undefined ? '—' : n(v.max)) + '</td></tr>'; }).join('') +
+    '<tr><td><b>Viajes (GPS)</b></td><td><span class="chip ' + (r.viajes.estado === 'CON DATOS' ? 'ok' : (r.viajes.estado === 'ERROR' ? 'mal' : 'aviso')) + '">' + esc(r.viajes.estado) + '</span></td><td>' + (r.viajes.n === undefined ? '—' : n(r.viajes.n)) + '</td><td colspan="4" class="peq">' + (r.viajes.n ? n(r.viajes.km) + ' km · conducción ' + hhmm(r.viajes.conduccion_h) + ' h · ralentí ' + hhmm(r.viajes.ralenti_h) + ' h' : '') + '</td></tr>' +
+    '</tbody></table></div><div class="pie-modal"><button class="btn" data-act="cerrar">Cerrar</button></div>', 'ancho');
+}
 function unidadAvanzada(i) {
   var x = uCtx.unidades[i];
   var ro, dg, uo;
   try { ro = x.reglas_ids ? JSON.parse(x.reglas_ids) : {}; dg = x.diag_ids ? JSON.parse(x.diag_ids) : {}; uo = x.unidades_origen ? JSON.parse(x.unidades_origen) : {}; } catch (e) { ro = {}; dg = {}; uo = {}; }
   var perfil = uCtx.perfilesFull.filter(function (p) { return p.perfil === x.perfil; })[0] || {};
   var nombreRegla = {}; uCtx.reglas.forEach(function (r) { nombreRegla[r.id_regla] = r.nombre; });
-  var gas = String(x.combustible).toUpperCase() === 'GAS';
-  var claveDiag = { ODO: 'ODO', COMB: gas ? 'COMB_GAS' : 'COMB_DIESEL', HMOT: 'HMOT', HRAL: 'HRAL', CRAL: 'CRAL' };
+  var gas = String(x.combustible).toUpperCase() === 'GAS', elec = String(x.combustible).toUpperCase() === 'ELECTRICO';
+  var claveDiag = { ODO: 'ODO', COMB: gas ? 'COMB_GAS' : 'COMB_DIESEL', HMOT: 'HMOT', HRAL: 'HRAL', CRAL: 'CRAL', COMB_ALT: 'COMB_ALT', CRAL_ALT: 'CRAL_ALT', E_MOV: 'E_MOV', E_RAL: 'E_RAL', E_REG: 'E_REG', SOC: 'SOC', IGN: 'IGN', RPM: 'RPM' };
+  var rpmGuardados = {}; try { rpmGuardados = JSON.parse((window.__cfgRpm || '{}')) || {}; } catch (e) { rpmGuardados = {}; }
+  var rangos = rangosVacios(); try { if (x.rpm_rangos) { var rr = JSON.parse(x.rpm_rangos); Object.keys(rr).forEach(function (k) { rangos[k] = Object.assign(rangos[k] || {}, rr[k]); }); } } catch (e) {}
+  var vars = elec ? ['ODO', 'E_MOV', 'E_RAL', 'E_REG', 'SOC', 'IGN'] : ['ODO', 'COMB', 'HMOT', 'HRAL', 'CRAL'].concat(x.consumo_fuente === 'ALTERNA' ? ['COMB_ALT', 'CRAL_ALT'] : []).concat(x.rpm_modo === 'RANGOS' ? ['RPM', 'IGN'] : []);
+  var sel = function (id, val, opc) { return '<select id="' + id + '">' + opc.map(function (o) { return '<option value="' + o[0] + '"' + (val === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'; };
   var dgf = {}; uCtx.diag.forEach(function (d) { dgf[d.clave] = d; });
-  var h = '<h3>Configuración avanzada · ' + esc(x.placa) + '</h3><p class="peq">Solo para esta unidad. «Según perfil / por defecto» = usa lo definido en Reglas. Perfil actual: <b>' + esc(x.perfil || 'sin perfil') + '</b> · Combustible: <b>' + esc(x.combustible || '—') + '</b>.</p>' +
+  var h = '<h3>Configuración avanzada · ' + esc(x.placa) + '</h3><p class="peq">Solo para esta unidad. «Según perfil / por defecto» = usa lo definido en Reglas. Perfil actual: <b>' + esc(x.perfil || 'sin perfil') + '</b> · Energía: <b>' + esc(x.combustible || '—') + '</b>.</p>' +
+    '<div class="sec-t" style="margin-top:14px">Cómo se mide esta unidad <span class="peq">(vacío = lo de siempre)</span></div><div class="cols">' +
+    '<div><label>Distancia y horas desde</label>' + sel('m_origen', x.origen || '', [['', 'ECM (lo de siempre)'], ['ECM', 'ECM del motor'], ['GPS', 'GPS (viajes)']]) + '</div>' +
+    (elec ? '<div><label>Consumo</label><div class="peq" style="padding:8px 0">Eléctrico: movimiento + ralentí − regenerada (kWh).</div></div>' :
+      '<div><label>Consumo de combustible</label>' + sel('m_cons', x.consumo_fuente || '', [['', 'Principal ECM (lo de siempre)'], ['PRINCIPAL', 'Principal ECM'], ['ALTERNA', 'Variable alterna del dispositivo'], ['SIN', 'Sin consumo (guion, no retiene)']]) + '</div>' +
+      '<div><label>RPM</label>' + sel('m_rpm', x.rpm_modo || '', [['', 'Según perfil (lo de siempre)'], ['REGLAS', 'Reglas del perfil'], ['SIN', 'Sin RPM (guion, no retiene)'], ['RANGOS', 'Rangos propios']]) + '</div>') + '</div>' +
+    (elec ? '' : '<div id="m_rangos" style="display:' + (x.rpm_modo === 'RANGOS' ? 'block' : 'none') + '"><div class="sec-t" style="margin-top:12px">Rangos propios de RPM</div><p class="peq">Cada rango empieza donde termina el anterior. Solo cuentan lecturas con ignición encendida. «Condición»: en movimiento, detenido o ambos.</p>' +
+      '<div class="fila" style="margin:6px 0"><select id="m_perfil"><option value="">Copiar de un perfil guardado…</option>' + Object.keys(rpmGuardados).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select><input id="m_pnom" placeholder="Nombre para guardar estos rangos" size="26"><button class="btn chico sec" id="m_pgu">Guardar como perfil</button></div>' +
+      '<div class="tabla-wrap"><table><thead><tr><th>Rango</th><th>Desde (RPM)</th><th>Hasta (RPM)</th><th>Condición</th></tr></thead><tbody>' +
+      BANDAS_TXT.map(function (b) { var r = rangos[b[0]] || {}; return '<tr data-b="' + b[0] + '"><td>' + b[1] + '</td><td><input class="b_de" size="6" value="' + esc(r.de) + '"></td><td>' + (b[0] === 'exc' ? '<span class="peq">en adelante</span>' : '<input class="b_a" size="6" value="' + esc(r.a) + '">') + '</td><td><select class="b_c">' + [['AMBOS', 'Ambos'], ['MOV', 'En movimiento'], ['DET', 'Detenido']].map(function (o) { return '<option value="' + o[0] + '"' + ((r.cond || 'AMBOS') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></td></tr>'; }).join('') + '</tbody></table></div><div id="m_err" class="msg mal" style="display:none"></div></div>') +
+    '<div class="fila" style="margin-top:10px"><button class="btn chico sec" id="m_rev">Revisar variables de esta unidad (7 días)</button><span class="peq">Solo lectura.</span></div>' +
     '<div class="sec-t" style="margin-top:14px">Reglas de MyGeotab (todas)</div><div class="cols">' +
     uCtx.roles.map(function (r) {
       var porPerfil = perfil[r] ? (nombreRegla[perfil[r]] || perfil[r]) : 'ninguna';
@@ -585,7 +627,7 @@ function unidadAvanzada(i) {
         uCtx.reglas.map(function (g) { return '<option value="' + esc(g.id_regla) + '"' + (ro[r] === g.id_regla ? ' selected' : '') + '>' + esc(g.nombre) + ' · ' + esc(g.categoria) + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</div>' +
     '<div class="sec-t" style="margin-top:16px">Variables de medición (id del diagnóstico y unidad en que llega)</div><div class="tabla-wrap"><table><thead><tr><th>Variable</th><th>Id del diagnóstico</th><th>Unidad de origen</th></tr></thead><tbody>' +
-    ['ODO', 'COMB', 'HMOT', 'HRAL', 'CRAL'].map(function (k) {
+    vars.map(function (k) {
       var def = dgf[claveDiag[k]] || {}, posibles = String(def.unidades_posibles || '').split(',').filter(Boolean);
       return '<tr data-var="' + k + '"><td><b>' + esc(VAR_TXT[k]) + '</b>' + (k === 'CRAL' && gas ? '<div class="peq">GAS: sin ralentí, va 0</div>' : '') + '</td><td><input class="v_id" style="width:100%;min-width:230px" placeholder="Por defecto: ' + esc(def.id_diagnostico || '') + '" value="' + esc(dg[k] || '') + '"></td>' +
         '<td><select class="v_un"><option value="">Por defecto: ' + esc(def.unidad_origen || '') + '</option>' + posibles.map(function (p) { return '<option' + (uo[k] === p ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select></td></tr>';
@@ -594,7 +636,20 @@ function unidadAvanzada(i) {
     '<div class="pie-modal"><button class="btn sec" id="o_reset">Restablecer todo a lo normal</button><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="o_ok">Aceptar</button></div>';
   var m = abrirModal(h, 'ancho');
   m.dataset.fijo = '1';
-  m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); toast('Restablecido. Pulsa «Aceptar».'); };
+  var leerRangos = function () { var r = {}; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var k = tr.getAttribute('data-b'), de = tr.querySelector('.b_de').value.trim(), a = tr.querySelector('.b_a'); r[k] = { de: de, cond: tr.querySelector('.b_c').value }; if (a) r[k].a = a.value.trim(); }); return r; };
+  var rpmSel = m.querySelector('#m_rpm'); if (rpmSel) rpmSel.onchange = function () { m.querySelector('#m_rangos').style.display = this.value === 'RANGOS' ? 'block' : 'none'; };
+  var consSel = m.querySelector('#m_cons'); if (consSel) consSel.onchange = function () { if (this.value === 'ALTERNA') toast('Pulsa «Aceptar» y vuelve a abrir Avanzado para ver las variables alternas.'); };
+  m.querySelector('#m_rev').onclick = conRuedaFn(function () { return revisarVariablesUnidad(x); });
+  var perSel = m.querySelector('#m_perfil'); if (perSel) perSel.onchange = function () { var pf = rpmGuardados[this.value]; if (!pf) return; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var b = pf[tr.getAttribute('data-b')] || {}; tr.querySelector('.b_de').value = b.de === undefined ? '' : b.de; var a = tr.querySelector('.b_a'); if (a) a.value = b.a === undefined ? '' : b.a; tr.querySelector('.b_c').value = b.cond || 'AMBOS'; }); };
+  var pgu = m.querySelector('#m_pgu'); if (pgu) pgu.onclick = conRuedaFn(async function () {
+    var nom = m.querySelector('#m_pnom').value.trim(), r = leerRangos(), er = validarRangosJs(r), e = m.querySelector('#m_err');
+    if (!nom) { e.style.display = 'block'; e.textContent = 'Escribe un nombre para el perfil.'; return; }
+    if (er.length) { e.style.display = 'block'; e.textContent = er.join(' '); return; }
+    e.style.display = 'none'; rpmGuardados[nom] = r;
+    var o = await ejecutar(function () { return api('config_set', { config: { RPM_PERFILES: JSON.stringify(rpmGuardados) } }, uCtx.clave); }, 'Perfil de rangos «' + nom + '» guardado');
+    if (o) window.__cfgRpm = JSON.stringify(rpmGuardados);
+  });
+  m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); var rr2 = m.querySelector('#m_rangos'); if (rr2) rr2.style.display = 'none'; toast('Restablecido. Pulsa «Aceptar».'); };
   m.querySelector('#o_ok').onclick = function () {
     var r = {}, d = {}, u = {};
     m.querySelectorAll('select[data-rol]').forEach(function (sel) { if (sel.value) r[sel.getAttribute('data-rol')] = sel.value; });
@@ -602,6 +657,10 @@ function unidadAvanzada(i) {
       var k = tr.getAttribute('data-var'), id = tr.querySelector('.v_id').value.trim(), un = tr.querySelector('.v_un').value;
       if (id) d[k] = id; if (un) u[k] = un;
     });
+    var vo = function (id) { var e = m.querySelector('#' + id); return e ? e.value : ''; };
+    var modo = vo('m_rpm');
+    if (modo === 'RANGOS') { var rg = leerRangos(), er = validarRangosJs(rg); if (er.length) { var me = m.querySelector('#m_err'); me.style.display = 'block'; me.textContent = er.join(' '); return; } x.rpm_rangos = JSON.stringify(rg); }
+    x.origen = vo('m_origen'); if (!elec) { x.consumo_fuente = vo('m_cons'); x.rpm_modo = modo; }
     x.reglas_ids = Object.keys(r).length ? JSON.stringify(r) : '';
     x.diag_ids = Object.keys(d).length ? JSON.stringify(d) : '';
     x.unidades_origen = Object.keys(u).length ? JSON.stringify(u) : '';
@@ -623,6 +682,18 @@ function periodosCerrados(tipo) {
   }
   return lista;
 }
+/* Semanas cerradas (lunes a domingo), de la más reciente hacia atrás. */
+function semanasCerradas() {
+  var h = limaHoy(), hoy = new Date(Date.UTC(h.a, h.m - 1, h.d)), dow = hoy.getUTCDay() || 7, lista = [];
+  var lunes = new Date(hoy.getTime() - (dow - 1 + 7) * 86400000);   // lunes de la última semana ya terminada
+  for (var k = 0; k < 16; k++) {
+    var ini = new Date(lunes.getTime() - k * 7 * 86400000), fin = new Date(ini.getTime() + 6 * 86400000);
+    lista.push({ semanal: true, desde: iso10(ini), hasta: iso10(fin), ini: ini, fin: fin });
+  }
+  return lista;
+}
+function iso10(d) { return d.getUTCFullYear() + '-' + (d.getUTCMonth() + 1 < 10 ? '0' : '') + (d.getUTCMonth() + 1) + '-' + (d.getUTCDate() < 10 ? '0' : '') + d.getUTCDate(); }
+function textoSemana(p) { var c = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']; return (p.ini.getUTCDate() < 10 ? '0' : '') + p.ini.getUTCDate() + ' ' + c[p.ini.getUTCMonth()] + ' al ' + (p.fin.getUTCDate() < 10 ? '0' : '') + p.fin.getUTCDate() + ' ' + c[p.fin.getUTCMonth()] + ' ' + p.fin.getUTCFullYear(); }
 /* Las fechas se guardan en UTC; en pantalla siempre se muestran en hora de Lima: "2026-11-09 16:57". */
 function fechaLima(iso) {
   if (!iso) return '—';
@@ -638,6 +709,10 @@ function textoEmision(txt, tipo) {
   if (!m) return d;
   t = String(t || m[4] || '').toUpperCase();
   var a = Number(m[1]), mes = Number(m[2]);
+  if (t === 'SEMANAL') {
+    var i0 = new Date(Date.UTC(a, mes - 1, Number(m[3]))), f0 = new Date(i0.getTime() + 6 * 86400000), cs = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    return (i0.getUTCDate() < 10 ? '0' : '') + i0.getUTCDate() + ' ' + cs[i0.getUTCMonth()] + ' – ' + (f0.getUTCDate() < 10 ? '0' : '') + f0.getUTCDate() + ' ' + cs[f0.getUTCMonth()] + ' ' + f0.getUTCFullYear() + ' (semanal)';
+  }
   var fin = t === 'QUINCENAL' ? 15 : new Date(a, mes, 0).getDate();
   var cortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   return '01–' + (fin < 10 ? '0' : '') + fin + ' ' + cortos[mes - 1] + ' ' + a + (t ? ' (' + t.toLowerCase() + ')' : '');
@@ -647,28 +722,28 @@ async function emisionManual(clienteId, nombre) {
   var existentes = [];
   try { existentes = await api('emisiones_listar', { q: '' }); } catch (e) { existentes = []; }
   var h = '<h3>Nueva emisión · ' + esc(nombre) + '</h3><p class="peq">Se extraen y validan los datos; NO se envía sola. Revisa en «Emisiones» y envía con el botón.</p><div class="cols">' +
-    '<div><label>Tipo de informe</label><select id="e_tipo"><option value="MENSUAL">Mensual (mes completo)</option><option value="QUINCENAL">Quincenal (del 1 al 15)</option></select></div>' +
+    '<div><label>Tipo de informe</label><select id="e_tipo"><option value="MENSUAL">Mensual (mes completo)</option><option value="QUINCENAL">Quincenal (del 1 al 15)</option><option value="SEMANAL">Semanal (lunes a domingo)</option></select></div>' +
     '<div><label>Periodo (solo periodos ya cerrados)</label><select id="e_per"></select></div></div><div class="periodo-info" id="e_info"></div>' +
     '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="e_ok">Crear emisión</button></div>';
   var m = abrirModal(h, 'medio');
   var tipoSel = m.querySelector('#e_tipo'), perSel = m.querySelector('#e_per'), info = m.querySelector('#e_info'), ok = m.querySelector('#e_ok');
   function llenar() {
-    var ps = periodosCerrados(tipoSel.value);
-    perSel.innerHTML = ps.map(function (p, i) { return '<option value="' + i + '">' + esc(textoPeriodo(p)) + '</option>'; }).join('');
+    var ps = tipoSel.value === 'SEMANAL' ? semanasCerradas() : periodosCerrados(tipoSel.value);
+    perSel.innerHTML = ps.map(function (p, i) { return '<option value="' + i + '">' + esc(p.semanal ? textoSemana(p) : textoPeriodo(p)) + '</option>'; }).join('');
     perSel._ps = ps; mostrar();
   }
   function mostrar() {
     var p = perSel._ps[Number(perSel.value)]; if (!p) { info.textContent = 'No hay periodos cerrados.'; ok.classList.add('off'); return; }
     ok.classList.remove('off');
-    var desde = p.a + '-' + (p.m < 10 ? '0' : '') + p.m + '-01';
+    var desde = p.semanal ? p.desde : p.a + '-' + (p.m < 10 ? '0' : '') + p.m + '-01';
     var ya = existentes.filter(function (e) { return e.tipo === tipoSel.value && e.periodo_desde === desde && (String(e.cliente).indexOf(nombre) >= 0 || String(nombre).indexOf(e.cliente) >= 0); })[0];
-    info.innerHTML = '<b>Periodo elegido:</b> ' + esc(textoPeriodo(p)) + ' (' + desde + ' → ' + p.a + '-' + (p.m < 10 ? '0' : '') + p.m + '-' + (p.hasta < 10 ? '0' : '') + p.hasta + ')' +
+    info.innerHTML = '<b>Periodo elegido:</b> ' + esc(p.semanal ? textoSemana(p) : textoPeriodo(p)) + ' (' + desde + ' → ' + (p.semanal ? p.hasta : p.a + '-' + (p.m < 10 ? '0' : '') + p.m + '-' + (p.hasta < 10 ? '0' : '') + p.hasta) + ')' +
       (ya ? '<div class="msg aviso" style="margin:8px 0 0">Ya existe una emisión de este periodo (estado ' + esc(ya.estado) + '). Si la creas de nuevo no se duplica: se abre la existente.</div>' : '');
   }
   tipoSel.onchange = llenar; perSel.onchange = mostrar; llenar();
   ok.onclick = conRuedaFn(async function () {
     var p = perSel._ps[Number(perSel.value)]; if (!p) return;
-    var r = await ejecutar(function () { return api('emision_crear', { cliente_id: clienteId, tipo: tipoSel.value, anio: p.a, mes: p.m }); });
+    var r = await ejecutar(function () { return api('emision_crear', p.semanal ? { cliente_id: clienteId, tipo: 'SEMANAL', desde: p.desde } : { cliente_id: clienteId, tipo: tipoSel.value, anio: p.a, mes: p.m }); });
     if (r) { cerrarModal(); toast(r.mensaje, 'ok'); ir('emisiones'); }
   });
 }
@@ -773,10 +848,11 @@ function htmlDetalle(d) {
   if (sig !== '4' && e.estado === 'LISTO' && e.pdf_url) otras += acc['4']('sec');
   h += '<details class="mas"><summary>Más opciones</summary><div class="fila">' + otras + '</div>' +
     '<div class="fila" style="margin-top:8px"><button class="btn sec' + off + '" data-act="reprocesar" data-run="' + run + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div></details>';
-  h += '<h3 style="margin-top:14px">Unidades</h3><div class="tabla-wrap" style="max-height:44vh"><table><thead><tr><th>Placa</th><th>Dist. km</th><th>Gal.</th><th>H. motor</th><th>Rend.</th><th>Vel. máx.</th><th>Nota</th><th>Estado</th><th></th></tr></thead><tbody>' +
+  h += '<h3 style="margin-top:14px">Unidades</h3><div class="tabla-wrap" style="max-height:44vh"><table><thead><tr><th>Placa</th><th>Dist. km</th><th>Consumo</th><th>H. motor</th><th>Rend.</th><th>Vel. máx.</th><th>Nota</th><th>Estado</th><th></th></tr></thead><tbody>' +
     d.unidades.map(function (u) {
       var nf = (u.errores || []).length;
-      return '<tr><td><b>' + esc(u.placa) + '</b></td><td>' + n(u.dist) + '</td><td>' + n(u.gal) + '</td><td>' + n(u.hmot) + '</td><td>' + n(u.rend) + '</td><td>' + (u.vmax == null ? '—' : esc(u.vmax)) + '</td><td>' + (u.nota == null ? '—' : esc(u.nota)) + '</td>' +
+      var uc = u.energia === 'GAS' ? 'm³' : (u.energia === 'ELECTRICO' ? 'kWh' : 'gal'), ur = u.energia === 'GAS' ? 'km/m³' : (u.energia === 'ELECTRICO' ? 'km/kWh' : 'km/gal');
+      return '<tr><td><b>' + esc(u.placa) + '</b>' + (u.energia && u.energia !== 'DIESEL' ? '<div class="peq">' + (u.energia === 'GAS' ? 'Gas' : 'Eléctrico') + '</div>' : '') + '</td><td>' + n(u.dist) + '</td><td>' + (u.consumo === 'SIN' ? '—' : n(u.gal) + ' <span class="peq">' + uc + '</span>') + '</td><td>' + n(u.hmot) + '</td><td>' + (u.consumo === 'SIN' ? '—' : n(u.rend) + ' <span class="peq">' + ur + '</span>') + '</td><td>' + (u.vmax == null ? '—' : esc(u.vmax)) + '</td><td>' + (u.nota == null ? '—' : esc(u.nota)) + '</td>' +
         '<td>' + (u.completa && !nf ? '<span class="chip ok">OK</span>' : (u.completa ? '<span class="chip mal">REVISAR</span>' : '<span class="chip aviso">INCOMPLETA</span>')) + ((u.manuales || []).length ? ' <span class="chip azul">manual</span>' : '') + '</td>' +
         '<td><button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(u.placa) + '">Datos</button></td></tr>';
     }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button></div>';
@@ -788,21 +864,27 @@ function htmlDetalle(d) {
 }
 /* Valor de una métrica con su unidad, tal como se usa en el informe. */
 function hhmm(h) { var t = Math.round(Number(h) * 60), hh = Math.floor(t / 60), mm = t % 60; return hh.toLocaleString('es-PE') + ':' + (mm < 10 ? '0' : '') + mm; }
-function textoValor(clave, v) {
+function textoValor(clave, v, energia) {
   if (v === null || v === undefined || v === '' || isNaN(Number(v))) return '—';
   var x = Number(v);
   if (clave === 'DIST') return Math.round(x).toLocaleString('es-PE') + ' km';
-  if (clave === 'COMB' || clave === 'CRAL') return (Math.round(x * 10) / 10).toLocaleString('es-PE') + ' gal';
-  if (clave === 'HMOT' || clave === 'HRAL' || clave.indexOf('rpm_') === 0) return hhmm(x) + ' h';
+  if (clave === 'COMB' || clave === 'CRAL') return (Math.round(x * 10) / 10).toLocaleString('es-PE') + (energia === 'GAS' ? ' m³' : ' gal');
+  if (clave === 'E_MOV' || clave === 'E_RAL' || clave === 'E_REG') return (Math.round(x * 100) / 100).toLocaleString('es-PE') + ' kWh';
+  if (clave === 'HMOT' || clave === 'HRAL' || clave === 'RALR' || clave.indexOf('rpm_') === 0) return hhmm(x) + ' h';
   if (clave === 'VMAX') return Math.round(x).toLocaleString('es-PE') + ' km/h';
   return Math.round(x).toLocaleString('es-PE') + ' eventos';
 }
 /* Números crudos de MyGeotab, solo para revisar (se muestran plegados). */
-function detalleTecnico(mt, f) {
+function detalleTecnico(mt, f, un) {
   var crudo = function (x) { return (Math.round(Number(x) * 100) / 100).toLocaleString('es-PE'); };
   var u = esc(String(f.unidad_cruda || '').toLowerCase());
   if (f.v1 === '' || f.v1 === undefined) return '';
-  if (['DIST', 'COMB', 'HMOT', 'HRAL', 'CRAL'].indexOf(mt.clave) >= 0) return 'Lectura al inicio del periodo: ' + crudo(f.v1) + ' ' + u + '<br>Lectura al final del periodo: ' + crudo(f.v2) + ' ' + u + '<br>El valor es la diferencia, convertida.';
+  if (mt.clave === 'CAR_N') return 'Cargas detectadas: ' + crudo(f.v1) + '<br>Tiempo total cargando: ' + hhmm(Number(f.v2) / 3600) + ' h';
+  if (mt.clave === 'CAR_SOC') return 'Estado de carga al inicio: ' + crudo(f.v1) + ' %<br>Estado de carga al final: ' + crudo(f.v2) + ' %';
+  if (mt.clave === 'CAR_USO') return 'Batería usada: ' + crudo(f.v1) + ' %<br>Veces que bajó del límite: ' + crudo(f.v2);
+  if (un && un.fuente === 'GPS' && ['DIST', 'HMOT', 'HRAL'].indexOf(mt.clave) >= 0) return 'Suma de los viajes del periodo (GPS): ' + crudo(f.v2) + (mt.clave === 'DIST' ? ' km' : ' segundos') + '.';
+  if (mt.clave === 'RALR' || mt.clave === 'rpm_ral' || mt.clave === 'rpm_exc') return 'Duración total: ' + crudo(f.v2) + ' segundos.';
+  if (['DIST', 'COMB', 'HMOT', 'HRAL', 'CRAL', 'E_MOV', 'E_RAL', 'E_REG'].indexOf(mt.clave) >= 0) return 'Lectura al inicio del periodo: ' + crudo(f.v1) + ' ' + u + '<br>Lectura al final del periodo: ' + crudo(f.v2) + ' ' + u + '<br>El valor es la diferencia, convertida.';
   if (mt.clave === 'VMAX') return 'Velocidad máxima registrada en los viajes del periodo: ' + crudo(f.v1) + ' km/h.';
   return 'Cantidad de eventos: ' + crudo(f.v1) + '<br>Duración total: ' + crudo(f.v2) + ' segundos.';
 }
@@ -810,16 +892,21 @@ function datosUnidad(id, placa) {
   var d = window.__det;
   var mapa = {}; d.filas.filter(function (f) { return f.placa === placa; }).forEach(function (f) { mapa[f.metrica] = f; });
   var un = d.unidades.filter(function (u) { return u.placa === placa; })[0] || {};
-  var h = '<h3>Datos de ' + esc(placa) + '</h3>' + ((un.errores || []).length ? '<div class="msg mal">' + un.errores.map(esc).join('\n') + '</div>' : '') +
+  var etq = [un.energia === 'GAS' ? 'Gas' : (un.energia === 'ELECTRICO' ? 'Eléctrico' : 'Diésel'), 'distancia y horas: ' + (un.fuente === 'GPS' ? 'GPS' : 'ECM')];
+  if (un.energia !== 'ELECTRICO') etq.push('consumo: ' + (un.consumo === 'SIN' ? 'sin consumo' : (un.consumo === 'ALTERNA' || (d.alterna && d.alterna[placa]) ? 'variable alterna' : 'principal ECM')));
+  var btnAlt = '';
+  if (d.v2 && un.energia !== 'ELECTRICO' && un.consumo === 'PRINCIPAL' && !(d.alterna && d.alterna[placa])) btnAlt = '<button class="btn chico sec" data-act="alterna" data-id="' + esc(id) + '" data-p="' + esc(placa) + '">Volver a extraer con variable alterna</button>';
+  else if (d.v2 && d.alterna && d.alterna[placa]) btnAlt = '<button class="btn chico sec" data-act="alterna" data-volver="1" data-id="' + esc(id) + '" data-p="' + esc(placa) + '">Volver a la variable principal (ECM)</button>';
+  var h = '<h3>Datos de ' + esc(placa) + '</h3><div class="fila" style="margin-bottom:8px"><span class="peq">' + esc(etq.join(' · ')) + '</span>' + btnAlt + '</div>' + ((un.errores || []).length ? '<div class="msg mal">' + un.errores.map(esc).join('\n') + '</div>' : '') +
     '<p class="peq">Un valor corregido a mano se usa tal cual (en la unidad indicada) y queda marcado como manual en el informe. «Valor actual» es el número que va al informe. Si el sistema tuvo que usar el último dato previo porque un día no tenía lectura, lo avisa bajo el estado.</p>' +
     '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th>Métrica</th><th>Estado</th><th>Valor actual</th><th>Corregir</th><th></th></tr></thead><tbody>' +
-    d.metricas.map(function (mt) {
+    d.metricas.filter(function (mt) { return !d.v2 || mapa[mt.clave]; }).map(function (mt) {
       var f = mapa[mt.clave] || {};
       return '<tr><td>' + esc(mt.nombre) + '</td><td>' + (f.manual === 'SI' ? '<span class="chip azul">MANUAL ' + esc(f.valor_manual) + '</span>' : '<span class="chip ' + (f.estado === 'OK' ? 'ok' : (f.estado === 'FALLO' ? 'mal' : 'aviso')) + '">' + esc(f.estado || '—') + '</span>') + (f.motivo ? '<div class="peq" style="color:var(--aviso);margin-top:4px;max-width:260px">' + esc(f.motivo) + '</div>' : '') + '</td>' +
-        '<td><b>' + (f.manual === 'SI' ? textoValor(mt.clave, f.valor_manual) : textoValor(mt.clave, f.valor)) + '</b>' + (f.manual === 'SI' ? ' <span class="peq">(corregido a mano)</span>' : '') +
+        '<td><b>' + (f.manual === 'SI' ? textoValor(mt.clave, f.valor_manual, un.energia) : (mt.clave.indexOf('CAR_') === 0 ? (f.estado === 'OK' && f.v1 !== '' ? (mt.clave === 'CAR_N' ? n(f.v1) + ' cargas' : (mt.clave === 'CAR_SOC' ? n(f.v1) + ' → ' + n(f.v2) + ' %' : n(f.v1) + ' % usado')) : '—') : textoValor(mt.clave, f.valor, un.energia))) + '</b>' + (f.manual === 'SI' ? ' <span class="peq">(corregido a mano)</span>' : '') +
           (f.valor_error && f.manual !== 'SI' ? '<div class="peq" style="color:var(--mal)">' + esc(f.valor_error) + '</div>' : '') +
-          (detalleTecnico(mt, f) ? '<details class="peq" style="margin-top:4px"><summary style="cursor:pointer">Ver detalle técnico</summary><div style="margin-top:4px">' + detalleTecnico(mt, f) + '</div></details>' : '') + '</td>' +
-        '<td style="white-space:nowrap"><input class="corr" size="8" id="k_' + esc(mt.clave) + '" placeholder="' + esc(mt.unidad_manual) + '"> <button class="btn chico" data-act="corregir" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Guardar</button></td>' +
+          (detalleTecnico(mt, f, un) ? '<details class="peq" style="margin-top:4px"><summary style="cursor:pointer">Ver detalle técnico</summary><div style="margin-top:4px">' + detalleTecnico(mt, f, un) + '</div></details>' : '') + '</td>' +
+        (mt.editable === false ? '<td class="peq">No se corrige a mano: se vuelve a extraer.</td>' : '<td style="white-space:nowrap"><input class="corr" size="8" id="k_' + esc(mt.clave) + '" placeholder="' + esc(mt.unidad_manual) + '"> <button class="btn chico" data-act="corregir" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Guardar</button></td>') +
         '<td>' + (f.manual === 'SI' ? '<button class="btn chico sec" data-act="restaurar" data-id="' + esc(id) + '" data-p="' + esc(placa) + '" data-m="' + esc(mt.clave) + '">Quitar manual</button>' : '') + '</td></tr>';
     }).join('') + '</tbody></table></div>' +
     '<label>Observación manual de la unidad (se imprime en el informe)</label><textarea id="k_obs">' + esc(un.obs) + '</textarea>' +
@@ -917,18 +1004,34 @@ async function vistaConfig() {
   $('app').innerHTML = '<div class="tarjeta"><h2>Cortes y horario</h2><div class="cols">' +
     '<div><label>Día del informe QUINCENAL (1 al 15 del mes)</label><input id="k_dq" type="number" min="1" max="28" value="' + esc(c.DIA_QUINCENAL) + '"></div>' +
     '<div><label>Día del informe MENSUAL (mes anterior completo)</label><input id="k_dm" type="number" min="1" max="28" value="' + esc(c.DIA_MENSUAL) + '"></div>' +
+    '<div><label>Día de la semana del informe SEMANAL (1 = lunes … 7 = domingo)</label><input id="k_ds" type="number" min="1" max="7" value="' + esc(c.DIA_SEMANAL || 1) + '"></div>' +
     '<div><label>Hora de ejecución (0-23, hora de Lima)</label><input id="k_h" type="number" min="0" max="23" value="' + esc(c.HORA_EJECUCION) + '"></div></div></div>' +
     '<div class="tarjeta"><h2>Umbrales por defecto</h2><div class="cols">' +
     '<div><label>Rendimiento máximo permitido (km/gal)</label><input id="k_rx" value="' + esc(c.REND_MAX) + '"></div>' +
     '<div><label>Rendimiento mínimo permitido (km/gal)</label><input id="k_rn" value="' + esc(c.REND_MIN) + '"></div>' +
+    '<div><label>Gas · rendimiento máximo (km/m³)</label><input id="k_gx" value="' + esc(c.REND_MAX_GAS) + '"></div>' +
+    '<div><label>Gas · rendimiento mínimo (km/m³)</label><input id="k_gn" value="' + esc(c.REND_MIN_GAS) + '"></div>' +
+    '<div><label>Eléctrico · rendimiento máximo (km/kWh)</label><input id="k_ex" value="' + esc(c.REND_MAX_ELEC) + '"></div>' +
+    '<div><label>Eléctrico · rendimiento mínimo (km/kWh)</label><input id="k_en" value="' + esc(c.REND_MIN_ELEC) + '"></div>' +
+    '<div><label>Límite de ralentí del informe (% · se marca en rojo por encima)</label><input id="k_rl" value="' + esc(c.RALENTI_LIMITE) + '"></div>' +
     '<div><label>Bandas de eventos por 100 km (4 valores)</label><input id="k_be" value="' + esc(c.BANDAS_EVENTOS) + '"></div>' +
     '<div><label>Bandas de velocidad máxima (4 valores)</label><input id="k_bv" value="' + esc(c.BANDAS_VELMAX) + '"></div></div></div>' +
+    '<div class="tarjeta"><h2>Eléctricos, ignición y límite de unidades</h2><div class="cols">' +
+    '<div><label>Carga: subida mínima de estado de carga detenido (puntos de %)</label><input id="k_cp" value="' + esc(c.CARGA_MIN_PUNTOS) + '"></div>' +
+    '<div><label>Batería baja: se cuenta cada vez que baja de (%)</label><input id="k_bb" value="' + esc(c.BATERIA_BAJA) + '"></div>' +
+    '<div><label>Ignición: segundos que se descartan tras encender (rangos propios de RPM)</label><input id="k_ib" value="' + esc(c.IGNICION_BUFFER_SEG) + '"></div>' +
+    '<div><label>Máximo de unidades activas por cliente</label><input id="k_lu" value="' + esc(c.LIMITE_UNIDADES) + '"></div></div></div>' +
+    '<div class="tarjeta"><h2>Mantenimiento del sistema</h2><div class="fila"><button class="btn sec" id="k_est">Actualizar estructura de las hojas</button><span class="peq">Agrega las columnas y diagnósticos nuevos que falten. No cambia ni borra nada de lo que ya tienes. Se usa una vez después de actualizar el código.</span></div></div>' +
     '<div class="tarjeta"><h2>Correo por defecto</h2><label>Asunto (variables {CLIENTE} {TIPO} {PERIODO})</label><input style="width:100%" id="k_as" value="' + esc(c.ASUNTO) + '">' +
     '<label>Texto del correo</label><textarea id="k_cu">' + esc(c.CUERPO) + '</textarea></div>' +
     '<div class="fila"><button class="btn verde" id="k_ok">Guardar configuración</button><span class="peq">Se pidió la contraseña al entrar; si cambias de sección volverá a pedirla.</span></div>';
+  $('k_est').onclick = conRuedaFn(async function () {
+    var r = await ejecutar(function () { return api('estructura_actualizar', {}, adminClave); }, 'Estructura actualizada');
+    if (r) abrirModal('<h3>Estructura actualizada</h3><pre class="peq" style="white-space:pre-wrap">' + esc(r) + '</pre><div class="pie-modal"><button class="btn" data-act="cerrar">Cerrar</button></div>', 'chico');
+  });
   $('k_ok').onclick = conRuedaFn(async function () {
     var g = function (x) { return $(x).value; };
-    await ejecutar(function () { return api('config_set', { config: { DIA_QUINCENAL: g('k_dq'), DIA_MENSUAL: g('k_dm'), HORA_EJECUCION: g('k_h'), REND_MAX: g('k_rx'), REND_MIN: g('k_rn'), BANDAS_EVENTOS: g('k_be'), BANDAS_VELMAX: g('k_bv'), ASUNTO: g('k_as'), CUERPO: g('k_cu') } }, adminClave); }, 'Configuración guardada');
+    await ejecutar(function () { return api('config_set', { config: { DIA_QUINCENAL: g('k_dq'), DIA_MENSUAL: g('k_dm'), DIA_SEMANAL: g('k_ds'), HORA_EJECUCION: g('k_h'), REND_MAX: g('k_rx'), REND_MIN: g('k_rn'), REND_MAX_GAS: g('k_gx'), REND_MIN_GAS: g('k_gn'), REND_MAX_ELEC: g('k_ex'), REND_MIN_ELEC: g('k_en'), RALENTI_LIMITE: g('k_rl'), CARGA_MIN_PUNTOS: g('k_cp'), BATERIA_BAJA: g('k_bb'), IGNICION_BUFFER_SEG: g('k_ib'), LIMITE_UNIDADES: g('k_lu'), BANDAS_EVENTOS: g('k_be'), BANDAS_VELMAX: g('k_bv'), ASUNTO: g('k_as'), CUERPO: g('k_cu') } }, adminClave); }, 'Configuración guardada');
   });
 }
 
@@ -938,23 +1041,28 @@ var GUIA_TAB = 'instalacion';
 var G_INST = [
   ['Crea la carpeta y el proyecto', '<p>En <b>Google Drive</b> crea una carpeta llamada <code>CAF AUTOMATICO</code>.</p><p>Entra a esa carpeta, haz clic derecho en un espacio vacío › <b>Más</b> › <b>Google Apps Script</b>. Se crea un proyecto <b>dentro</b> de la carpeta.</p><div class="nota">Es importante que el proyecto quede dentro de «CAF AUTOMATICO»: ahí se crearán solos el Sheet de control y la carpeta CLIENTES.</div>'],
   ['Pega el manifiesto (appsscript.json)', '<ul><li>En el editor, pulsa el engranaje <b>Configuración del proyecto</b>.</li><li>Marca <b>«Mostrar el archivo de manifiesto appsscript.json en el editor»</b>.</li><li>Vuelve a <b>Editor</b>, abre <code>appsscript.json</code>, borra todo su contenido y pega el del archivo <code>appsscript.json</code> que te entregué.</li></ul>'],
-  ['Crea un archivo por cada script', '<p>Con el botón <b>+</b> › <b>Script</b> crea un archivo por cada <code>.gs</code> que te entregué. Ponle el <b>mismo nombre sin «.gs»</b> y pega su contenido:</p><ul><li><code>00_comun</code> · <code>01_mygeotab</code> · <code>02_extraccion</code> · <code>03_calculos</code></li><li><code>04_pdf</code> · <code>04b_pdf_slides</code> · <code>05_correo</code> · <code>06_panel_api</code></li><li><code>07_instalador</code> · <code>09_logo</code></li></ul><p>Borra el archivo <code>Código.gs</code> vacío que trae al inicio. Pulsa <b>Guardar</b> (Ctrl+S).</p>'],
+  ['Crea un archivo por cada script', '<p>Con el botón <b>+</b> › <b>Script</b> crea un archivo por cada <code>.gs</code> que te entregué. Ponle el <b>mismo nombre sin «.gs»</b> y pega su contenido:</p><ul><li><code>00_comun</code> · <code>01_mygeotab</code> · <code>02_extraccion</code> · <code>03_calculos</code></li><li><code>04_pdf</code> · <code>04b_pdf_slides</code> · <code>04c_pdf_energias</code> · <code>05_correo</code> · <code>06_panel_api</code></li><li><code>07_instalador</code> · <code>08_ampliaciones</code> · <code>09_logo</code></li></ul><p>Borra el archivo <code>Código.gs</code> vacío que trae al inicio. Pulsa <b>Guardar</b> (Ctrl+S).</p>'],
   ['Ejecuta la instalación', '<p>En la barra superior elige la función <code>instalarProyecto</code> y pulsa <b>Ejecutar</b>.</p><p>Google pide permisos: <b>Revisar permisos</b> › tu cuenta › <b>Avanzado</b> › <b>Ir al proyecto</b> › <b>Permitir</b>.</p><p>Al terminar, abre el <b>Registro de ejecución</b> (abajo): verás los enlaces del Sheet de control y de la carpeta CLIENTES. Puedes ejecutarla otra vez sin riesgo: no duplica nada.</p>'],
-  ['Cambia tu contraseña de administrador', '<p><b>Configuración del proyecto</b> › <b>Propiedades de la secuencia de comandos</b> › busca <code>ID_ADMINISTRADOR</code>.</p><p>Su <b>valor es la contraseña</b>. Al inicio vale <code>123456789</code>: cámbiala por la tuya. Esa contraseña se pide en: Credenciales, Reglas, Configuración, Agregar/Editar cliente y Unidades.</p>'],
+  ['Cambia tu contraseña de administrador', '<p><b>Configuración del proyecto</b> › <b>Propiedades de la secuencia de comandos</b> › busca <code>ID_ADMINISTRADOR</code>.</p><p>Su <b>valor es la contraseña</b>. Al inicio vale <code>123456789</code>: cámbiala por la tuya. Esa contraseña se pide en: Credenciales, Reglas, Configuración (incluye límites, semanal y mantenimiento), Agregar/Editar cliente y Unidades.</p>'],
   ['Publica la aplicación web', '<ul><li><b>Implementar</b> › <b>Nueva implementación</b> › engranaje › <b>Aplicación web</b>.</li><li><b>Ejecutar como:</b> Yo. <b>Quién tiene acceso:</b> Cualquier persona.</li><li><b>Implementar</b> y copia la URL que termina en <code>/exec</code>.</li></ul><div class="nota">Si tu Google Workspace no deja elegir «Cualquier persona», pídele a tu administrador de Google que lo permita.</div><div class="nota info">Cuando cambies el código más adelante: Implementar › Administrar implementaciones › lápiz › Versión: <b>Nueva versión</b> › Implementar. La URL no cambia.</div>'],
   ['Pega la URL en el panel', '<p>Abre el archivo <code>index.html</code> con el Bloc de notas (o cualquier editor). Cerca del inicio del script busca <code>URL_API</code> y pega tu URL entre las comillas:</p><p><code>var URL_API = \'https://script.google.com/macros/s/....../exec\';</code></p><p>Guarda el archivo.</p>'],
   ['Sube el panel a GitHub', '<ul><li>Crea un repositorio y sube <b>estos archivos juntos</b>: <code>index.html</code>, <code>logo.png</code> y (opcional, solo de referencia) el PDF modelo.</li><li><b>Settings</b> › <b>Pages</b> › Branch <code>main</code> › <b>Save</b>.</li><li>GitHub te da la dirección de tu panel. Ábrela.</li></ul>'],
   ['Registra tu base de MyGeotab', '<p>En el panel: <b>Credenciales</b> › escribe la contraseña de administrador › <b>Nueva base</b>: nombre, servidor (vacío = my.geotab.com), base de datos, usuario y contraseña de MyGeotab.</p><div class="nota">Las credenciales quedan sin cifrar en la hoja BASES del Sheet de control. No compartas ese Sheet.</div>'],
+  ['Si ya tenías el sistema instalado y actualizas el código', '<p>Reemplaza el contenido de los archivos <code>.gs</code> que cambiaron y <b>agrega los dos archivos nuevos</b> <code>08_ampliaciones</code> y <code>04c_pdf_energias</code>. Luego:</p><ul><li>Ejecuta <code>actualizarEstructura</code> (o en el panel: <b>Configuración › Actualizar estructura de las hojas</b>). Agrega solo las columnas y diagnósticos nuevos que falten; <b>no cambia ni borra nada</b> de lo que ya tienes.</li><li><b>Implementar › Administrar implementaciones › lápiz › Versión: Nueva versión › Implementar</b> (la URL no cambia).</li><li>Sube el nuevo <code>index.html</code> (con tu <code>URL_API</code>) y recarga con <b>Ctrl + F5</b>.</li></ul><div class="nota info">Los clientes que ya tenías siguen exactamente igual (quincenal y mensual, diésel/gas, mismo PDF). Todo lo nuevo es opcional y apaga por defecto; se aplica desde la próxima emisión. Los informes ya en curso terminan con las reglas con las que empezaron.</div>'],
   ['Haz una prueba completa', '<ul><li><b>Clientes</b> › Nuevo cliente › después <b>Unidades</b> › «Actualizar desde MyGeotab» › activa unidades con perfil y combustible.</li><li>«Nueva emisión» de un periodo <b>ya cerrado</b>.</li><li>Cuando llegue a LISTO: «Generar vista previa» y revisa el PDF con calma.</li></ul><p>Solo cuando el PDF te convenza, sigue con el último paso.</p>'],
   ['ÚLTIMO PASO: activa el modo automático', '<p>Hazlo <b>solo después de que la prueba anterior salió bien</b>. Sin este paso el sistema no emite solo: únicamente trabaja cuando tú pulsas algo en el panel (eso es lo que quieres mientras pruebas).</p><p>En Apps Script elige la función <code>activarTriggers</code> y pulsa <b>Ejecutar</b>. Crea la revisión diaria a las 6:00 a. m. hora de Lima (la hora se cambia en Configuración). Desde entonces: el <b>día 16</b> emite el quincenal y el <b>día 1</b> el mensual; si todo está correcto se envía solo, y si algo falla queda RETENIDO y te avisa.</p><div class="nota info">Puedes ejecutarla más de una vez sin que se duplique. Para apagar el modo automático: Apps Script › icono del reloj (Activadores) › elimina el activador de <code>revisarCortesDiario</code>.</div>']
 ];
 var G_USO = [
   ['Crear un cliente', '<p><b>Clientes</b> › «Nuevo cliente» (pide contraseña). Elige la base de MyGeotab, escribe el <b>id del grupo</b>, la <b>razón social</b> (es el nombre del PDF), los correos <b>Para</b> y <b>Cc</b> (separados por coma) y, si quieres, asunto y texto propios. Se crean solas su carpeta y su hoja de datos.</p>'],
-  ['Traer y activar las unidades', '<p>En la tarjeta del cliente: <b>Unidades</b> (pide contraseña) › «Actualizar desde MyGeotab». Las nuevas entran como <b>PENDIENTE</b> y no se usan todavía.</p><p>Marca las unidades, elige <b>perfil de motor</b> (A26 EPA 2021 o X15), <b>combustible</b> (DIESEL o GAS) y estado <b>ACTIVO</b> › «Aplicar» › «Guardar cambios». La placa que escribas es la que se imprime.</p>'],
+  ['Traer y activar las unidades', '<p>En la tarjeta del cliente: <b>Unidades</b> (pide contraseña) › «Actualizar desde MyGeotab». Las nuevas entran como <b>PENDIENTE</b> y no se usan todavía.</p><p>Marca las unidades, elige <b>perfil de motor</b> (A26 EPA 2021 o X15), <b>energía</b> (DIESEL, GAS o ELECTRICO) y estado <b>ACTIVO</b> › «Aplicar» › «Guardar cambios». La placa que escribas es la que se imprime. <b>Tú decides la energía de cada unidad</b>: es lo que el sistema usa para extraer los datos y armar el PDF. Un eléctrico no necesita perfil de motor.</p><div class="nota">Máximo <b>20 unidades activas</b> por cliente (las pendientes cuentan como activas; las inactivas no). Si al traer unidades de MyGeotab se supera, el sistema te avisa, no deja guardar mientras siga superado y recomienda trabajar ese cliente con <b>Power BI</b>. Primero inactiva las que no se informarán.</div>'],
+  ['Periodos del cliente: semanal, quincenal, mensual', '<p>En <b>Editar</b> cliente › <b>Informes que recibe</b>: solo semanal · solo quincenal · solo mensual · semanal y mensual · quincenal y mensual (como siempre). Semanal y quincenal no se combinan.</p><p>El <b>semanal</b> es de <b>lunes a domingo</b> de la semana anterior y sale el día de la semana definido en Configuración (lunes por defecto); puede cruzar de mes (por ejemplo 26 oct al 01 nov). Si coincide con el mensual el día 1, salen dos informes distintos. El cambio rige desde la próxima emisión.</p>'],
+  ['Cómo se mide cada unidad (opcional)', '<p>En <b>Avanzado</b> de cada unidad, «Cómo se mide esta unidad». Vacío = lo de siempre:</p><ul><li><b>Distancia y horas</b>: ECM (lo de siempre) o GPS (suma de los viajes; horas = conducción + ralentí).</li><li><b>Consumo</b>: principal ECM, variable alterna del dispositivo, o sin consumo (en el PDF sale un guion y no retiene el informe).</li><li><b>RPM</b>: reglas del perfil, sin RPM (guion) o <b>rangos propios</b> (ralentí, bajo, económico, potencia, exceso; cada rango empieza donde termina el anterior; condición en movimiento / detenido / ambos). Puedes guardar los rangos como <b>perfil con nombre</b> y copiarlos a otras unidades.</li></ul><p>«<b>Revisar variables</b>» muestra, solo en lectura, qué variables traen datos los últimos 7 días (odómetro, horas, consumos, RPM, ignición, viajes, estado de carga y contadores de kWh). No cambia nada.</p>'],
+  ['Variable alterna en un informe puntual', '<p>Si una unidad vino sin consumo con la variable principal, en el informe abre <b>Datos</b> de la unidad › «<b>Volver a extraer con variable alterna</b>». Solo se vuelve a extraer el consumo de esa unidad y solo en ese informe; el siguiente vuelve a la ECM. También puedes volver a la principal desde el mismo lugar.</p>'],
+  ['Cómo se ve el PDF con varias energías', '<p>Es <b>un solo PDF</b>. Si el cliente tiene unidades de más de una energía, el PDF trae una sección por cada una (FLOTA DIÉSEL, FLOTA A GAS, FLOTA ELÉCTRICA), cada una desde una hoja nueva y con sus propias tablas, rankings, gráficas y conclusiones; la numeración de hojas es continua. Si el cliente tiene una sola energía, el PDF sale como siempre, sin rótulo.</p><ul><li><b>Gas</b>: m³, km/m³ y m³/hr (sin consumo en ralentí).</li><li><b>Eléctrico</b>: distancia, kWh en movimiento, en ralentí, regenerada y total, km/kWh, cargas (cantidad y tiempo), estado de carga inicial y final, veces bajo el 20 % y km por % de batería. Sin RPM ni sobrerrevoluciones.</li><li>El <b>ralentí</b> del informe sale de la regla de ralentí del perfil, con límite de 25 % (editable en Configuración).</li></ul>'],
   ['Configuración avanzada por unidad', '<p>El botón <b>Avanzado</b> permite, solo para esa unidad, cambiar <b>cualquiera de las 9 reglas</b> (velocidad, aceleración, frenada, giro, 3 rangos de RPM, sobrerrevoluciones, ralentí) y <b>cualquier variable de medición</b> (odómetro, combustible, horas de motor, horas de ralentí, consumo de ralentí): id del diagnóstico y unidad de origen.</p><div class="nota info">Una unidad en INACTIVO deja de traer datos desde la próxima ejecución. Además el sistema revisa MyGeotab y deja fuera sola a las unidades dadas de baja antes del periodo.</div><div class="nota">Si cambias algo y ya hay informes en curso, usa «Traer todo de nuevo» en esos informes.</div>'],
   ['Editar un cliente', '<p>Botón <b>Editar</b> (pide contraseña): correos, asunto, texto, límites de rendimiento, qué informes recibe (quincenal, mensual o ambos) o desactivarlo.</p>'],
-  ['Cómo sale solo cada mes', '<p>Cada día a la hora configurada el sistema revisa: el <b>día 16</b> emite el <b>quincenal</b> (1 al 15) y el <b>día 1</b> el <b>mensual</b> del mes anterior.</p><p>Si todo está completo y correcto, <b>se envía solo</b>. Si algo falla o es dudoso queda <b>RETENIDO</b>: no se envía nada al cliente y te llega un correo a tu cuenta.</p>'],
-  ['Emisión manual', '<p>En el cliente: «Nueva emisión» › tipo y periodo (se listan solo periodos ya cerrados, con sus fechas). Se extraen y validan los datos, pero <b>no se envía sola</b>: tú revisas y envías.</p>'],
+  ['Cómo sale solo cada mes', '<p>Cada día a la hora configurada el sistema revisa: el <b>día 16</b> emite el <b>quincenal</b> (1 al 15), el <b>día 1</b> el <b>mensual</b> del mes anterior y, para los clientes con semanal, el <b>día de la semana configurado</b> la semana anterior (lunes a domingo). Cada cliente recibe solo los periodos que tiene elegidos.</p><p>Si todo está completo y correcto, <b>se envía solo</b>. Si algo falla o es dudoso queda <b>RETENIDO</b>: no se envía nada al cliente y te llega un correo a tu cuenta.</p>'],
+  ['Emisión manual', '<p>En el cliente: «Nueva emisión» › tipo (mensual, quincenal o semanal) y periodo (se listan solo periodos ya cerrados, con sus fechas). Se extraen y validan los datos, pero <b>no se envía sola</b>: tú revisas y envías.</p>'],
   ['Seguir el avance', '<p><b>Emisiones</b> › abre la fila. Verás los 4 pasos (Extracción, Validación, Vista previa, Envío), la barra de avance y, al terminar bien, el mensaje verde <b>«Extracción completa: N de N unidades, N de N métricas»</b>. Si MyGeotab pide esperar, el sistema espera y sigue solo.</p>'],
   ['Corregir lo que salga mal', '<p>Si quedó RETENIDO, lee los problemas. En «Datos» de cada unidad puedes escribir un valor manual (queda marcado en el informe), quitarlo o dejar una observación. Luego «Validar de nuevo».</p><ul><li><b>Reintentar extracción</b>: repite solo lo que falló.</li><li><b>Traer todo de nuevo</b>: repite todo.</li></ul>'],
   ['Vista previa', '<p>Con la extracción completa, «Generar vista previa» crea un PDF <b>borrador</b> (uno por cliente, se reemplaza cada vez). Ábrelo y revísalo.</p>'],
@@ -972,7 +1080,7 @@ var G_FALLA = [
   ['Quiero rehacerlo todo de una vez', '«Reprocesar todo y enviar si queda correcto»: vuelve a consultar MyGeotab, valida y envía solo si todo queda verde. Si algo falla, queda RETENIDO sin enviar.']
 ];
 var G_ESTADOS = [['EN_COLA', 'azul', 'Esperando su turno de extracción.'], ['EXTRAYENDO', 'azul', 'Trayendo datos de MyGeotab.'], ['RETENIDO', 'mal', 'Algo falló o es dudoso. No se envió nada.'], ['LISTO', 'aviso', 'Completo y correcto. Esperando el envío.'], ['ENVIANDO', 'azul', 'El correo está saliendo.'], ['ENVIADO', 'ok', 'Enviado ✔ (no se repite).']];
-var G_ARCHIVOS = [['appsscript.json', 'Manifiesto del proyecto de Apps Script (paso 2).'], ['00_comun.gs … 09_logo.gs (10 archivos)', 'Código del sistema; van en Apps Script (paso 3).'], ['index.html', 'El panel. Va a GitHub (paso 8) con tu URL /exec pegada.'], ['logo.png', 'Logo de Navisaf. Va a GitHub junto al index.html.'], ['MODELO_CAF_LA_VIGA….pdf', 'PDF modelo de referencia. Opcional; no lo usa el panel.']];
+var G_ARCHIVOS = [['appsscript.json', 'Manifiesto del proyecto de Apps Script (paso 2).'], ['00_comun.gs … 09_logo.gs (12 archivos, incluye 04c_pdf_energias y 08_ampliaciones)', 'Código del sistema; van en Apps Script (paso 3).'], ['index.html', 'El panel. Va a GitHub (paso 8) con tu URL /exec pegada.'], ['logo.png', 'Logo de Navisaf. Va a GitHub junto al index.html.'], ['MODELO_CAF_LA_VIGA….pdf', 'PDF modelo de referencia. Opcional; no lo usa el panel.']];
 var hechosMem = {};
 function leerHechos() { var h = {}; try { h = JSON.parse(leerLocal('guiaHechos') || '{}'); } catch (e) { h = {}; } return Object.assign(h, hechosMem); }
 function vistaGuia() {
@@ -990,13 +1098,13 @@ function vistaGuia() {
       }).join('');
   };
   if (GUIA_TAB === 'instalacion') cuerpo = sinUrl + '<div class="nota info">Hazlo con la cuenta de Google que enviará los correos. Tiempo aproximado: 30 minutos. Los archivos que necesitas son los que te entregué junto con este panel.</div>' + pasos(G_INST, 'i', true) +
-    '<div class="nota">Nada de esto se probó contra tu Google real; por eso el paso 10 (prueba completa con un periodo cerrado) es obligatorio antes del último paso (modo automático).</div>';
+    '<div class="nota">Nada de esto se probó contra tu Google real; por eso el paso 11 (prueba completa con un periodo cerrado) es obligatorio antes del último paso (modo automático).</div>';
   else if (GUIA_TAB === 'uso') cuerpo = pasos(G_USO, 'u', false);
   else if (GUIA_TAB === 'falla') cuerpo = '<div class="nota info">En cualquier fallo siempre puedes volver a extraer de MyGeotab, validar, ver la vista previa y enviar, desde el detalle de la emisión (pasos 1 al 4).</div>' + G_FALLA.map(function (f) { return '<div class="g-paso"><div class="g-num" style="background:var(--ambar);color:#1c2433">!</div><div><h4>' + esc(f[0]) + '</h4><p>' + esc(f[1]) + '</p></div></div>'; }).join('');
   else cuerpo = '<div class="tarjeta"><h2>Qué significa cada estado</h2>' + G_ESTADOS.map(function (e) { return '<div class="fila" style="margin:8px 0"><span class="chip ' + e[1] + '" style="min-width:104px;justify-content:center">' + e[0] + '</span><span>' + esc(e[2]) + '</span></div>'; }).join('') + '</div>' +
-    '<div class="tarjeta"><h2>Colores de la NOTA en el PDF</h2><div class="fila"><span class="chip ok">15 a 20 · verde</span><span class="chip aviso">11 a 14 · amarillo</span><span class="chip mal">10 o menos · rojo</span></div><p class="peq">La NOTA es la suma de 6 sub-notas (1 a 5) × 2/3: sobrerrevoluciones, velocidad >80, velocidad máxima, giros, aceleraciones y frenadas. Sin eventos = 5.</p></div>' +
+    '<div class="tarjeta"><h2>Colores de la NOTA en el PDF</h2><div class="fila"><span class="chip ok">15 a 20 · verde</span><span class="chip aviso">11 a 14 · amarillo</span><span class="chip mal">10 o menos · rojo</span></div><p class="peq">La NOTA es la suma de 6 sub-notas (1 a 5) × 2/3: sobrerrevoluciones, velocidad >80, velocidad máxima, giros, aceleraciones y frenadas. Sin eventos = 5. Si la unidad no tiene sobrerrevoluciones (eléctrico, o sin RPM) son 5 medidas × 4/5, y el máximo sigue siendo 20.</p></div>' +
     '<div class="tarjeta"><h2>Qué archivo va a dónde</h2><div class="tabla-wrap"><table><thead><tr><th>Archivo</th><th>Para qué sirve</th></tr></thead><tbody>' + G_ARCHIVOS.map(function (a) { return '<tr><td><code>' + esc(a[0]) + '</code></td><td>' + esc(a[1]) + '</td></tr>'; }).join('') + '</tbody></table></div></div>' +
-    '<div class="tarjeta"><h2>Datos que conviene saber</h2><ul style="margin:0;padding-left:20px"><li>Si el primer o el último día no tiene lectura de un contador, se usa la última lectura de hasta 7 días antes y queda anotado en «Motivo».</li><li>Las credenciales de MyGeotab se guardan sin cifrar en la hoja BASES.</li><li>Un informe ENVIADO no se reenvía.</li></ul></div>';
+    '<div class="tarjeta"><h2>Datos que conviene saber</h2><ul style="margin:0;padding-left:20px"><li>Si el primer o el último día no tiene lectura de un contador, se usa la última lectura de hasta 7 días antes y queda anotado en «Motivo».</li><li>Las credenciales de MyGeotab se guardan sin cifrar en la hoja BASES.</li><li>Un informe ENVIADO no se reenvía.</li><li>Los cambios de configuración (periodos, energía, origen, consumo, RPM) rigen desde la próxima emisión; los informes en curso terminan como empezaron.</li></ul></div>';
   $('app').innerHTML = '<div class="guia">' + cab + cuerpo + '</div>';
 }
 
@@ -1025,10 +1133,16 @@ var ACT = {
   enviar: async function (d) { if (!confirm('¿Enviar el informe a ' + d.n + '? Esta acción no se puede repetir.')) return; var r = await ejecutar(function () { return api('emision_enviar', { id: d.id }); }); repintarDetalle(); if (r) toast('Informe enviado ✔', 'ok'); },
   envioSi: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: true }); }, 'Confirmado: queda como ENVIADO'); if (r) { repintarDetalle(); } },
   envioNo: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: false }); }, 'Vuelve a LISTO para enviarlo de nuevo'); if (r) { repintarDetalle(); } },
-  crearAviso: async function (d) { var a = avisosCache[Number(d.i)]; var r = await ejecutar(function () { return api('emision_crear', { cliente_id: a.cliente_id, tipo: a.crear.tipo, anio: a.crear.anio, mes: a.crear.mes, auto: d.auto === '1' }); }); if (r) { toast(r.mensaje, 'ok'); refrescarAvisos(); } },
+  crearAviso: async function (d) { var a = avisosCache[Number(d.i)]; var r = await ejecutar(function () { return api('emision_crear', { cliente_id: a.cliente_id, tipo: a.crear.tipo, anio: a.crear.anio, mes: a.crear.mes, desde: a.crear.desde || undefined, auto: d.auto === '1' }); }); if (r) { toast(r.mensaje, 'ok'); refrescarAvisos(); } },
   datosUnidad: function (d) { datosUnidad(d.id, d.p); },
   corregir: async function (d) { var v = document.getElementById('k_' + d.m).value; var r = await ejecutar(function () { return api('dato_corregir', { id: d.id, placa: d.p, metrica: d.m, valor: v }); }, 'Corregido y validado de nuevo'); if (r) { await repintarDetalle(); cerrarModal(); datosUnidad(d.id, d.p); } },
   restaurar: async function (d) { var r = await ejecutar(function () { return api('dato_restaurar', { id: d.id, placa: d.p, metrica: d.m }); }, 'Valor manual quitado'); if (r) { await repintarDetalle(); cerrarModal(); datosUnidad(d.id, d.p); } },
+  alterna: async function (d) {
+    var vol = d.volver === '1';
+    if (!confirm(vol ? '¿Volver a la variable principal (ECM) de ' + d.p + ' en este informe? Se vuelve a extraer solo el consumo de esa unidad.' : '¿Volver a extraer el consumo de ' + d.p + ' con la variable alterna del dispositivo? Aplica solo a este informe; el próximo vuelve a la ECM. Se vuelve a extraer solo el consumo de esa unidad.')) return;
+    var r = await ejecutar(function () { return api('emision_alterna', { id: d.id, placa: d.p, volver: vol }); }, vol ? 'Se vuelve a la variable principal' : 'Se extraerá con la variable alterna');
+    if (r) { cerrarModal(); repintarDetalle(); }
+  },
   obs: async function (d) { var r = await ejecutar(function () { return api('obs_guardar', { id: d.id, placa: d.p, texto: document.getElementById('k_obs').value }); }, 'Observación guardada'); if (r) { cerrarModal(); repintarDetalle(); } },
   formBase: function (d) { formBase(d.i === undefined ? undefined : Number(d.i)); },
   borrarBase: async function (d) { var b = cache.basesAdm[Number(d.i)]; if (!confirm('¿Eliminar la base «' + b.nombre + '»?')) return; var r = await ejecutar(function () { return api('admin_base_eliminar', { id: b.id }, adminClave); }, 'Eliminada'); if (r) recargarBases(); },
