@@ -749,11 +749,15 @@ async function emisionManual(clienteId, nombre) {
 }
 
 /* =============================== EMISIONES =============================== */
-var filtro = { q: '', estado: '' }, listaEmi = [];
+var filtro = { q: '', estado: '', mes: '' }, listaEmi = [];
+function mesLima() { return new Date(Date.now() - 5 * 3600000).toISOString().slice(0, 7); }
+function mesDe(e) { var m = /^(\d{4})-(\d{2})/.exec(String(e.periodo_desde || '')); return m ? m[1] + '-' + m[2] : ''; }
+function mesTxt(k) { var a = k.split('-'); var n = MESES[Number(a[1]) - 1] || k; return n.charAt(0).toUpperCase() + n.slice(1) + ' ' + a[0]; }
 var ESTADOS = [['', 'Todos'], ['EN_COLA', 'En cola'], ['EXTRAYENDO', 'Extrayendo'], ['RETENIDO', 'Retenidos'], ['LISTO', 'Listos'], ['ENVIANDO', 'Enviando'], ['ENVIADO', 'Enviados']];
 var CLASE = { ENVIADO: 'ok', LISTO: 'aviso', RETENIDO: 'mal', EN_COLA: 'azul pulso', EXTRAYENDO: 'azul pulso', ENVIANDO: 'azul pulso' };
 async function vistaEmisiones() {
-  $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="filtros" id="filtros"></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista">' + pantallaCarga('Cargando emisiones…') + '</div>';
+  filtro.mes = mesLima();   // al entrar siempre aparece el mes de hoy
+  $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="fila"><select id="fMes" title="Mes del periodo del informe" style="width:auto"></select><div class="filtros" id="filtros"></div></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista">' + pantallaCarga('Cargando emisiones…') + '</div>';
   await cargarEmisiones();
   temporizador = setInterval(function () { if (!pila.length) cargarEmisiones(true); }, 6000);
 }
@@ -762,6 +766,13 @@ async function cargarEmisiones(silencioso) {
     var todas = await api('emisiones_listar', { q: filtro.q });
     listaEmi = todas;
     if (!$('lista')) return;
+    var meses = {}; meses[mesLima()] = 1; todas.forEach(function (e) { var k = mesDe(e); if (k) meses[k] = 1; });
+    var listaMeses = Object.keys(meses).sort().reverse();
+    if (filtro.mes && filtro.mes !== 'TODOS' && !meses[filtro.mes]) listaMeses.unshift(filtro.mes);
+    var selM = $('fMes'), firmaM = listaMeses.join('|');
+    if (selM && selM.dataset.f !== firmaM) { selM.dataset.f = firmaM; selM.innerHTML = '<option value="TODOS">Todos los meses</option>' + listaMeses.map(function (k) { return '<option value="' + k + '">' + esc(mesTxt(k)) + '</option>'; }).join(''); }
+    if (selM) { selM.value = filtro.mes || 'TODOS'; selM.onchange = function () { filtro.mes = selM.value; cargarEmisiones(true); }; }
+    todas = todas.filter(function (e) { return !filtro.mes || filtro.mes === 'TODOS' || mesDe(e) === filtro.mes; });
     var cuenta = {}; todas.forEach(function (e) { cuenta[e.estado] = (cuenta[e.estado] || 0) + 1; });
     $('filtros').innerHTML = ESTADOS.map(function (s) { return '<button data-act="fEstado" data-e="' + s[0] + '" class="' + (filtro.estado === s[0] ? 'act' : '') + '">' + s[1] + (s[0] ? ' (' + (cuenta[s[0]] || 0) + ')' : ' (' + todas.length + ')') + '</button>'; }).join('');
     var l = todas.filter(function (e) { return !filtro.estado || e.estado === filtro.estado; });
@@ -771,7 +782,7 @@ async function cargarEmisiones(silencioso) {
         return '<tr class="clic" data-act="verEmision" data-id="' + esc(e.id) + '"><td style="width:34px">' + (e.estado === 'ENVIADO' ? checkHtml() : '') + '</td><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(e.tipo) + '</td><td>' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</td>' +
           '<td><span class="chip ' + (sinConf ? 'mal' : (CLASE[e.estado] || '')) + '">' + esc(sinConf ? 'SIN CONFIRMAR' : e.estado) + '</span></td><td>' + esc(fechaLima(e.fecha_envio)) + '</td><td class="peq">' + esc(e.destinatarios || '—') + '</td>' +
           '<td style="white-space:nowrap">' + (e.pdf_url ? '<a class="btn chico sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '" onclick="event.stopPropagation()">PDF</a>' : '') + '</td></tr>';
-      }).join('') + '</tbody></table></div>' : '<div class="tarjeta vacio">No hay emisiones con esos filtros.</div>';
+      }).join('') + '</tbody></table></div>' : '<div class="tarjeta vacio">No hay emisiones con esos filtros' + (filtro.mes && filtro.mes !== 'TODOS' ? ' en ' + esc(mesTxt(filtro.mes)) : '') + '.</div>';
   } catch (e) { if (!silencioso) alerta(e.message); }
 }
 
@@ -786,8 +797,10 @@ async function detalleEmision(id) {
     det = document.getElementById('det'); if (!det) return;
     var a = document.activeElement;
     if (!forzar && a && (a.classList.contains('corr') || a.tagName === 'TEXTAREA')) return;
+    var marcadasIgn = Array.prototype.map.call(det.querySelectorAll('.chk-ign:checked'), function (x) { return x.dataset.p; });   // conserva las casillas «Ignorar» marcadas
     var masAbierto = !!det.querySelector('details.mas[open]');   // la ventana se refresca sola: se conserva «Más opciones» abierto
     window.__det = d; det.innerHTML = htmlDetalle(d);
+    marcadasIgn.forEach(function (pl) { Array.prototype.forEach.call(det.querySelectorAll('.chk-ign'), function (x) { if (x.dataset.p === pl) x.checked = true; }); });
     if (masAbierto) { var dm = det.querySelector('details.mas'); if (dm) dm.open = true; }
   }
   detalleEmision.repintar = function () { return pintar(true); };
