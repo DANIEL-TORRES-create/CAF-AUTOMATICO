@@ -771,7 +771,7 @@ async function cargarEmisiones(silencioso) {
     if (filtro.mes && filtro.mes !== 'TODOS' && !meses[filtro.mes]) listaMeses.unshift(filtro.mes);
     var selM = $('fMes'), firmaM = listaMeses.join('|');
     if (selM && selM.dataset.f !== firmaM) { selM.dataset.f = firmaM; selM.innerHTML = '<option value="TODOS">Todos los meses</option>' + listaMeses.map(function (k) { return '<option value="' + k + '">' + esc(mesTxt(k)) + '</option>'; }).join(''); }
-    if (selM) { selM.value = filtro.mes || 'TODOS'; selM.onchange = function () { filtro.mes = selM.value; cargarEmisiones(true); }; }
+    if (selM) { selM.value = filtro.mes || 'TODOS'; selM.onchange = function () { filtro.mes = selM.value; $('lista').innerHTML = pantallaCarga('Cargando emisiones…'); cargarEmisiones(true); }; }
     todas = todas.filter(function (e) { return !filtro.mes || filtro.mes === 'TODOS' || mesDe(e) === filtro.mes; });
     var cuenta = {}; todas.forEach(function (e) { cuenta[e.estado] = (cuenta[e.estado] || 0) + 1; });
     $('filtros').innerHTML = ESTADOS.map(function (s) { return '<button data-act="fEstado" data-e="' + s[0] + '" class="' + (filtro.estado === s[0] ? 'act' : '') + '">' + s[1] + (s[0] ? ' (' + (cuenta[s[0]] || 0) + ')' : ' (' + todas.length + ')') + '</button>'; }).join('');
@@ -797,6 +797,7 @@ async function detalleEmision(id) {
     det = document.getElementById('det'); if (!det) return;
     var a = document.activeElement;
     if (!forzar && a && (a.classList.contains('corr') || a.tagName === 'TEXTAREA')) return;
+    if (!forzar && (tareaActual || det.querySelector('.cargando'))) return;   // no repintar mientras una acción está trabajando: se perdería la rueda
     var marcadasIgn = Array.prototype.map.call(det.querySelectorAll('.chk-ign:checked'), function (x) { return x.dataset.p; });   // conserva las casillas «Ignorar» marcadas
     var masAbierto = !!det.querySelector('details.mas[open]');   // la ventana se refresca sola: se conserva «Más opciones» abierto
     window.__det = d; det.innerHTML = htmlDetalle(d);
@@ -1166,13 +1167,19 @@ var ACT = {
     var marcadas = Array.prototype.map.call(document.querySelectorAll('.chk-ign:checked'), function (x) { return x.dataset.p; });
     if (!marcadas.length) { alerta('Marca «Ignorar (sin operación)» en las unidades que no tuvieron operación, o corrige sus datos.'); return; }
     if (!confirm('Se ignorarán ' + marcadas.join(', ') + ': saldrán en el PDF con guiones en todas sus mediciones y no contarán en totales ni notas. Solo aplica a esta emisión. ¿Continuar?')) return;
-    var ult;
-    for (var i = 0; i < marcadas.length; i++) { ult = await ejecutar(function () { return api('emision_ignorar', { id: d.id, placa: marcadas[i], ignorar: true }); }); if (!ult) { repintarDetalle(); return; } }
-    await repintarDetalle();
-    if (ult.estado === 'LISTO') { toast('Datos validados. Generando la vista previa…'); var r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); if (r) { toast('Vista previa lista', 'ok'); window.open(r.url, '_blank', 'noopener'); repintarDetalle(); } }
-    else toast('Aún quedan problemas en otras unidades: corrígelas o ignóralas.');
+    var fin = cargandoModal('Aplicando «Ignorar» y validando la emisión…'), ult;
+    try {
+      for (var i = 0; i < marcadas.length; i++) { ult = await ejecutar(function () { return api('emision_ignorar', { id: d.id, placa: marcadas[i], ignorar: true }); }); if (!ult) break; }
+      await repintarDetalle();
+    } finally { fin(); }
+    if (!ult) return;
+    if (ult.estado === 'LISTO') {
+      var fin2 = cargandoModal('Generando la vista previa del PDF… puede tardar un minuto');
+      var r; try { r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); } finally { fin2(); }
+      if (r) { toast('Vista previa lista', 'ok'); window.open(r.url, '_blank', 'noopener'); repintarDetalle(); }
+    } else toast('Aún quedan problemas en otras unidades: corrígelas o ignóralas.');
   },
-  quitarIgnorar: async function (d) { if (!confirm('¿Quitar «ignorar» de ' + d.p + '? Se volverán a validar sus datos.')) return; var r = await ejecutar(function () { return api('emision_ignorar', { id: d.id, placa: d.p, ignorar: false }); }, 'Unidad restablecida y validada de nuevo'); if (r) repintarDetalle(); },
+  quitarIgnorar: async function (d) { if (!confirm('¿Quitar «ignorar» de ' + d.p + '? Se volverán a validar sus datos.')) return; var fin = cargandoModal('Quitando «ignorar» y validando de nuevo…'); try { var r = await ejecutar(function () { return api('emision_ignorar', { id: d.id, placa: d.p, ignorar: false }); }, 'Unidad restablecida y validada de nuevo'); if (r) await repintarDetalle(); } finally { fin(); } },
   datosUnidad: function (d) { datosUnidad(d.id, d.p); },
   corregir: async function (d) { var v = document.getElementById('k_' + d.m).value; var r = await ejecutar(function () { return api('dato_corregir', { id: d.id, placa: d.p, metrica: d.m, valor: v }); }, 'Corregido y validado de nuevo'); if (r) { await repintarDetalle(); cerrarModal(); datosUnidad(d.id, d.p); } },
   restaurar: async function (d) { var r = await ejecutar(function () { return api('dato_restaurar', { id: d.id, placa: d.p, metrica: d.m }); }, 'Valor manual quitado'); if (r) { await repintarDetalle(); cerrarModal(); datosUnidad(d.id, d.p); } },
