@@ -266,7 +266,7 @@ async function api(accion, datos, clave) {
 var TEXTO_CARGA = { u_gua: 'Guardando…', c_ok: 'Guardando…', b_ok: 'Guardando…', r_ok: 'Guardando…', p_ok: 'Guardando…', k_ok: 'Guardando…', e_ok: 'Creando…', o_ok: 'Aceptando…', u_act: 'Consultando MyGeotab…', u_apl: 'Aplicando…',
   generar: 'Generando vista previa…', enviar: 'Enviando…', reprocesar: 'Programando…', corregir: 'Guardando…', obs: 'Guardando…', guardarDiag: 'Guardando…', actualizar: 'Actualizando…', restaurar: 'Quitando…',
   emiAccion: 'Procesando…', emiTodo: 'Programando…', envioSi: 'Confirmando…', envioNo: 'Confirmando…', crearAviso: 'Creando…', borrarBase: 'Eliminando…', borrarRegla: 'Quitando…', borrarPerfil: 'Quitando…',
-  m_pgu: 'Guardando…', m_rev: 'Consultando MyGeotab…', alterna: 'Programando…', kmgps: 'Programando…', k_est: 'Actualizando…', nuevoCliente: 'Abriendo…', editarCliente: 'Cargando…', unidades: 'Cargando…', emiManual: 'Cargando…', formBase: 'Abriendo…' };
+  m_pgu: 'Guardando…', m_rev: 'Consultando MyGeotab…', generarConLoQueHay: 'Aplicando…', quitarIgnorar: 'Quitando…', alterna: 'Programando…', kmgps: 'Programando…', k_est: 'Actualizando…', nuevoCliente: 'Abriendo…', editarCliente: 'Cargando…', unidades: 'Cargando…', emiManual: 'Cargando…', formBase: 'Abriendo…' };
 var tareaActual = null;
 function rueda(grande) { return '<span class="rueda' + (grande ? ' grande' : '') + '"></span>'; }
 function pantallaCarga(txt) { return '<div class="cargando-pantalla">' + rueda(true) + '<div>' + esc(txt || 'Cargando…') + '</div></div>'; }
@@ -820,7 +820,11 @@ function htmlDetalle(d) {
   if (sinConf) h += '<div class="msg mal"><b>Envío sin confirmar.</b> No se sabe si el correo salió. Revisa «Enviados» de tu Gmail y dinos qué pasó:<div class="fila" style="margin-top:8px"><button class="btn verde chico" data-act="envioSi" data-id="' + esc(e.id) + '">Sí se envió</button><button class="btn rojo chico" data-act="envioNo" data-id="' + esc(e.id) + '">No se envió</button></div></div>';
   else if (enviando) h += '<div class="msg info">Enviando…</div>';
   if (e.estado === 'LISTO' && e.resultado !== 'ERROR_ENVIO') h += '<div class="msg aviso">Lista. Genera la vista previa, revísala y pulsa «Enviar al cliente».</div>';
-  if (d.problemas.length) h += '<div class="msg mal"><b>Problemas (' + d.problemas.length + '):</b>' + d.problemas.map(function (p) { return '<div class="prob"><span>• <b>' + esc(p.placa) + ':</b> ' + esc(p.detalle) + '</span><button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(p.placa) + '">Corregir datos</button></div>'; }).join('') + '</div>';
+  var vistos = {}, puedeIgn = d.v2 && (e.estado === 'RETENIDO' || e.estado === 'LISTO') && !enviando;
+  if (d.problemas.length) h += '<div class="msg mal"><b>Problemas (' + d.problemas.length + '):</b>' + d.problemas.map(function (p) { var primera = !vistos[p.placa]; vistos[p.placa] = 1; return '<div class="prob"><span>• <b>' + esc(p.placa) + ':</b> ' + esc(p.detalle) + '</span><span class="fila" style="gap:8px">' + (puedeIgn && primera ? '<label class="peq" style="display:flex;gap:4px;align-items:center;margin:0;cursor:pointer"><input type="checkbox" class="chk-ign" data-p="' + esc(p.placa) + '"> Ignorar (sin operación)</label>' : '') + '<button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(p.placa) + '">Corregir datos</button></span></div>'; }).join('') +
+    (puedeIgn ? '<div class="fila" style="margin-top:8px"><button class="btn ambar" data-act="generarConLoQueHay" data-id="' + esc(e.id) + '">Generar con lo que hay</button><span class="peq">Las unidades marcadas «Ignorar» salen en el PDF con guiones en todas sus mediciones y no cuentan en totales ni notas. Solo afecta a esta emisión.</span></div>' : '') + '</div>';
+  var ign = Object.keys(d.ignoradas || {});
+  if (d.v2 && ign.length) h += '<div class="msg info"><b>Unidades ignoradas en esta emisión (sin operación):</b>' + ign.map(function (pl) { return '<div class="prob"><span>• <b>' + esc(pl) + '</b>: se imprime con guiones</span>' + (puedeIgn ? '<button class="btn chico sec" data-act="quitarIgnorar" data-id="' + esc(e.id) + '" data-p="' + esc(pl) + '">Quitar ignorar</button>' : '') + '</div>'; }).join('') + '</div>';
   var bloq = enviando && !sinConf;   // solo se bloquea mientras un envío está realmente en curso
   var corriendo = proceso && Number(e.bloqueo_hasta) > Date.now();
   if (proceso && !corriendo) h += '<div class="msg aviso">Si lleva varios minutos sin avanzar, pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído.</div>';
@@ -1081,6 +1085,7 @@ var G_USO = [
   ['Revisar lo enviado', '<p><b>Emisiones</b> › buscador por cliente o fecha: ves destinatarios, estado, fecha de envío y el enlace al PDF. <b>Reglas</b> y <b>Configuración</b> (días de corte, hora, umbrales, textos del correo) piden la contraseña de administrador al entrar y se pueden editar solo después de ingresarla.</p>']
 ];
 var G_FALLA = [
+  ['Unidad sin operación en el periodo (Ignorar)', '<p>Si una unidad no se movió en el periodo y por eso el sistema retiene la emisión, en el cuadro de Problemas marca «Ignorar (sin operación)» junto a esa unidad y pulsa «Generar con lo que hay». La unidad sigue en el PDF pero con guiones en todas sus mediciones, notas y tablas, y no cuenta en totales ni rankings. Es manual y solo afecta a esa emisión (se puede quitar con «Quitar ignorar»). Si el problema es una falla de datos y no falta de operación, no la ignores: usa variable alterna o kilometraje GPS. Para dejar de incluirla en los siguientes informes, ponla Inactiva en Unidades.</p>'],
   ['Quedó RETENIDO (dato dudoso o faltante)', 'Abre la emisión y lee los problemas. Corrige el dato a mano o usa «Traer todo de nuevo». Luego «Validar de nuevo» → «Generar vista previa» → «Enviar al cliente».'],
   ['La extracción se detuvo o no avanza', 'Pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído. Si MyGeotab estuvo caído, vuelve a intentarlo cuando regrese.'],
   ['Falló el envío (por ejemplo, falta un destinatario)', 'La emisión queda LISTO y aparece en la campana. Corrige en «Editar» cliente y pulsa «Enviar al cliente» otra vez.'],
@@ -1144,6 +1149,17 @@ var ACT = {
   envioSi: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: true }); }, 'Confirmado: queda como ENVIADO'); if (r) { repintarDetalle(); } },
   envioNo: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: false }); }, 'Vuelve a LISTO para enviarlo de nuevo'); if (r) { repintarDetalle(); } },
   crearAviso: async function (d) { var a = avisosCache[Number(d.i)]; var r = await ejecutar(function () { return api('emision_crear', { cliente_id: a.cliente_id, tipo: a.crear.tipo, anio: a.crear.anio, mes: a.crear.mes, desde: a.crear.desde || undefined, auto: d.auto === '1' }); }); if (r) { toast(r.mensaje, 'ok'); refrescarAvisos(); } },
+  generarConLoQueHay: async function (d) {
+    var marcadas = Array.prototype.map.call(document.querySelectorAll('.chk-ign:checked'), function (x) { return x.dataset.p; });
+    if (!marcadas.length) { alerta('Marca «Ignorar (sin operación)» en las unidades que no tuvieron operación, o corrige sus datos.'); return; }
+    if (!confirm('Se ignorarán ' + marcadas.join(', ') + ': saldrán en el PDF con guiones en todas sus mediciones y no contarán en totales ni notas. Solo aplica a esta emisión. ¿Continuar?')) return;
+    var ult;
+    for (var i = 0; i < marcadas.length; i++) { ult = await ejecutar(function () { return api('emision_ignorar', { id: d.id, placa: marcadas[i], ignorar: true }); }); if (!ult) { repintarDetalle(); return; } }
+    await repintarDetalle();
+    if (ult.estado === 'LISTO') { toast('Datos validados. Generando la vista previa…'); var r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); if (r) { toast('Vista previa lista', 'ok'); window.open(r.url, '_blank', 'noopener'); repintarDetalle(); } }
+    else toast('Aún quedan problemas en otras unidades: corrígelas o ignóralas.');
+  },
+  quitarIgnorar: async function (d) { if (!confirm('¿Quitar «ignorar» de ' + d.p + '? Se volverán a validar sus datos.')) return; var r = await ejecutar(function () { return api('emision_ignorar', { id: d.id, placa: d.p, ignorar: false }); }, 'Unidad restablecida y validada de nuevo'); if (r) repintarDetalle(); },
   datosUnidad: function (d) { datosUnidad(d.id, d.p); },
   corregir: async function (d) { var v = document.getElementById('k_' + d.m).value; var r = await ejecutar(function () { return api('dato_corregir', { id: d.id, placa: d.p, metrica: d.m, valor: v }); }, 'Corregido y validado de nuevo'); if (r) { await repintarDetalle(); cerrarModal(); datosUnidad(d.id, d.p); } },
   restaurar: async function (d) { var r = await ejecutar(function () { return api('dato_restaurar', { id: d.id, placa: d.p, metrica: d.m }); }, 'Valor manual quitado'); if (r) { await repintarDetalle(); cerrarModal(); datosUnidad(d.id, d.p); } },
