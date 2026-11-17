@@ -532,7 +532,7 @@ function pintarUnidades(nuevo) {
       if (uCtx.texto && (x.placa + ' ' + x.nombre_geotab).toLowerCase().indexOf(uCtx.texto.toLowerCase()) < 0) return '';
       var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids || x.origen || x.consumo_fuente || x.rpm_modo;
       return '<tr data-i="' + i + '"><td><input type="checkbox" class="u_sel"></td><td><input class="f_placa" size="9" value="' + esc(x.placa) + '"></td><td class="peq">' + esc(x.nombre_geotab) + '</td>' +
-        '<td><select class="f_perfil"><option value=""></option>' + uCtx.perfiles.map(function (p) { return '<option' + (p === x.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select></td>' +
+        '<td><select class="f_perfil"><option value=""></option>' + uCtx.perfiles.map(function (p) { return '<option' + (p === x.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' + etiquetaRpm(x) + '</td>' +
         '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option><option' + (x.combustible === 'ELECTRICO' ? ' selected' : '') + '>ELECTRICO</option></select></td>' +
         '<td><select class="f_est">' + ['ACTIVO', 'PENDIENTE', 'INACTIVO'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></td>' +
         '<td><input class="f_rmax" size="4" value="' + esc(x.rend_max) + '"></td><td><input class="f_rmin" size="4" value="' + esc(x.rend_min) + '"></td>' +
@@ -596,6 +596,18 @@ async function revisarVariablesUnidad(x) {
     '<tr><td><b>Viajes (GPS)</b></td><td><span class="chip ' + (r.viajes.estado === 'CON DATOS' ? 'ok' : (r.viajes.estado === 'ERROR' ? 'mal' : 'aviso')) + '">' + esc(r.viajes.estado) + '</span></td><td>' + (r.viajes.n === undefined ? '—' : n(r.viajes.n)) + '</td><td colspan="4" class="peq">' + (r.viajes.n ? n(r.viajes.km) + ' km · conducción ' + hhmm(r.viajes.conduccion_h) + ' h · ralentí ' + hhmm(r.viajes.ralenti_h) + ' h' : '') + '</td></tr>' +
     '</tbody></table></div><div class="pie-modal"><button class="btn" data-act="cerrar">Cerrar</button></div>', 'ancho');
 }
+function etiquetaRpm(x) {
+  if (x.rpm_modo === 'SIN') return '<div class="peq" style="margin-top:3px">RPM: sin RPM</div>';
+  if (x.rpm_modo !== 'RANGOS') return '';
+  var nom = ''; try {
+    var rr = JSON.parse(x.rpm_rangos || '{}') || {}; nom = rr.nombre || '';
+    if (!nom) {   // unidades antiguas sin nombre: se reconoce el perfil guardado que tenga los mismos rangos
+      var pg = JSON.parse(window.__cfgRpm || '{}') || {}, ks = ['ral', 'bajo', 'eco', 'pot', 'exc'];
+      Object.keys(pg).some(function (n) { var igual = ks.every(function (k) { var a = pg[n][k] || {}, b = rr[k] || {}; return String(a.de) === String(b.de) && String(a.a === undefined ? '' : a.a) === String(b.a === undefined ? '' : b.a) && (a.cond || 'AMBOS') === (b.cond || 'AMBOS'); }); if (igual) nom = n; return igual; });
+    }
+  } catch (e) {}
+  return '<div class="peq" style="margin-top:3px"><span class="chip azul">RPM: ' + esc(nom || 'rangos propios') + '</span></div>';
+}
 function unidadAvanzada(i) {
   var x = uCtx.unidades[i];
   var ro, dg, uo;
@@ -605,18 +617,18 @@ function unidadAvanzada(i) {
   var gas = String(x.combustible).toUpperCase() === 'GAS', elec = String(x.combustible).toUpperCase() === 'ELECTRICO';
   var claveDiag = { ODO: 'ODO', COMB: gas ? 'COMB_GAS' : 'COMB_DIESEL', HMOT: 'HMOT', HRAL: 'HRAL', CRAL: 'CRAL', COMB_ALT: 'COMB_ALT', CRAL_ALT: 'CRAL_ALT', E_MOV: 'E_MOV', E_RAL: 'E_RAL', E_REG: 'E_REG', SOC: 'SOC', IGN: 'IGN', RPM: 'RPM' };
   var rpmGuardados = {}; try { rpmGuardados = JSON.parse((window.__cfgRpm || '{}')) || {}; } catch (e) { rpmGuardados = {}; }
-  var rangos = rangosVacios(); try { if (x.rpm_rangos) { var rr = JSON.parse(x.rpm_rangos); Object.keys(rr).forEach(function (k) { rangos[k] = Object.assign(rangos[k] || {}, rr[k]); }); } } catch (e) {}
+  var rangos = rangosVacios(), nombreRangos = ''; try { if (x.rpm_rangos) { var rr = JSON.parse(x.rpm_rangos); nombreRangos = rr.nombre || ''; Object.keys(rr).forEach(function (k) { if (k !== 'nombre') rangos[k] = Object.assign(rangos[k] || {}, rr[k]); }); } } catch (e) {}
   var vars = elec ? ['ODO', 'E_MOV', 'E_RAL', 'E_REG', 'SOC', 'IGN'] : ['ODO', 'COMB', 'HMOT', 'HRAL', 'CRAL'].concat(x.consumo_fuente === 'ALTERNA' ? ['COMB_ALT', 'CRAL_ALT'] : []).concat(x.rpm_modo === 'RANGOS' ? ['RPM', 'IGN'] : []);
   var sel = function (id, val, opc) { return '<select id="' + id + '">' + opc.map(function (o) { return '<option value="' + o[0] + '"' + (val === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select>'; };
   var dgf = {}; uCtx.diag.forEach(function (d) { dgf[d.clave] = d; });
   var h = '<h3>Configuración avanzada · ' + esc(x.placa) + '</h3><p class="peq">Solo para esta unidad. «Según perfil / por defecto» = usa lo definido en Reglas. Perfil actual: <b>' + esc(x.perfil || 'sin perfil') + '</b> · Energía: <b>' + esc(x.combustible || '—') + '</b>.</p>' +
     '<div class="sec-t" style="margin-top:14px">Cómo se mide esta unidad <span class="peq">(vacío = lo de siempre)</span></div><div class="cols">' +
-    '<div><label>Distancia y horas desde</label>' + sel('m_origen', x.origen || '', [['', 'ECM (lo de siempre)'], ['ECM', 'ECM del motor'], ['GPSKM', 'ECM, con kilometraje por GPS (unidad sin odómetro)'], ['GPS', 'GPS completo (distancia y horas)']]) + '</div>' +
+    '<div><label>Distancia y horas desde</label>' + sel('m_origen', x.origen === 'ECM' ? '' : (x.origen || ''), [['', 'ECM del motor (lo de siempre)'], ['GPSKM', 'ECM, con kilometraje por GPS (unidad sin odómetro)'], ['GPS', 'GPS completo (distancia y horas)']]) + '</div>' +
     (elec ? '<div><label>Consumo</label><div class="peq" style="padding:8px 0">Eléctrico: movimiento + ralentí − regenerada (kWh).</div></div>' :
-      '<div><label>Consumo de combustible</label>' + sel('m_cons', x.consumo_fuente || '', [['', 'Principal ECM (lo de siempre)'], ['PRINCIPAL', 'Principal ECM'], ['ALTERNA', 'Variable alterna del dispositivo'], ['SIN', 'Sin consumo (guion, no retiene)']]) + '</div>' +
-      '<div><label>RPM</label>' + sel('m_rpm', x.rpm_modo || '', [['', 'Según perfil (lo de siempre)'], ['REGLAS', 'Reglas del perfil'], ['SIN', 'Sin RPM (guion, no retiene)'], ['RANGOS', 'Rangos propios']]) + '</div>') + '</div>' +
+      '<div><label>Consumo de combustible</label>' + sel('m_cons', x.consumo_fuente === 'PRINCIPAL' ? '' : (x.consumo_fuente || ''), [['', 'Principal ECM (lo de siempre)'], ['ALTERNA', 'Variable alterna del dispositivo'], ['SIN', 'Sin consumo (guion, no retiene)']]) + '</div>' +
+      '<div><label>RPM</label>' + sel('m_rpm', x.rpm_modo === 'REGLAS' ? '' : (x.rpm_modo || ''), [['', 'Reglas del perfil de motor (lo de siempre)'], ['SIN', 'Sin RPM (guion, no retiene)'], ['RANGOS', 'Rangos propios']]) + '</div>') + '</div>' +
     (elec ? '' : '<div id="m_rangos" style="display:' + (x.rpm_modo === 'RANGOS' ? 'block' : 'none') + '"><div class="sec-t" style="margin-top:12px">Rangos propios de RPM</div><p class="peq">Cada rango empieza donde termina el anterior. Solo cuentan lecturas con ignición encendida. «Condición»: en movimiento, detenido o ambos.</p>' +
-      '<div class="fila" style="margin:6px 0"><select id="m_perfil"><option value="">Copiar de un perfil guardado…</option>' + Object.keys(rpmGuardados).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select><input id="m_pnom" placeholder="Nombre para guardar estos rangos" size="26"><button class="btn chico sec" id="m_pgu">Guardar como perfil</button></div>' +
+      '<div class="fila" style="margin:6px 0"><select id="m_perfil"><option value="">Copiar de un perfil guardado…</option>' + Object.keys(rpmGuardados).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select><input id="m_pnom" placeholder="Nombre del rango (obligatorio)" size="30" value="' + esc(nombreRangos) + '"><span class="peq">Todo rango lleva nombre: al aceptar queda guardado para reutilizarlo en otras unidades.</span></div>' +
       '<div class="tabla-wrap"><table><thead><tr><th>Rango</th><th>Desde (RPM)</th><th>Hasta (RPM)</th><th>Condición</th></tr></thead><tbody>' +
       BANDAS_TXT.map(function (b) { var r = rangos[b[0]] || {}; return '<tr data-b="' + b[0] + '"><td>' + b[1] + '</td><td><input class="b_de" size="6" value="' + esc(r.de) + '"></td><td>' + (b[0] === 'exc' ? '<span class="peq">en adelante</span>' : '<input class="b_a" size="6" value="' + esc(r.a) + '">') + '</td><td><select class="b_c">' + [['AMBOS', 'Ambos'], ['MOV', 'En movimiento'], ['DET', 'Detenido']].map(function (o) { return '<option value="' + o[0] + '"' + ((r.cond || 'AMBOS') === o[0] ? ' selected' : '') + '>' + o[1] + '</option>'; }).join('') + '</select></td></tr>'; }).join('') + '</tbody></table></div><div id="m_err" class="msg mal" style="display:none"></div></div>') +
     '<div class="fila" style="margin-top:10px"><button class="btn chico sec" id="m_rev">Revisar variables de esta unidad (7 días)</button><span class="peq">Solo lectura.</span></div>' +
@@ -640,17 +652,9 @@ function unidadAvanzada(i) {
   var rpmSel = m.querySelector('#m_rpm'); if (rpmSel) rpmSel.onchange = function () { m.querySelector('#m_rangos').style.display = this.value === 'RANGOS' ? 'block' : 'none'; };
   var consSel = m.querySelector('#m_cons'); if (consSel) consSel.onchange = function () { if (this.value === 'ALTERNA') toast('Pulsa «Aceptar» y vuelve a abrir Avanzado para ver las variables alternas.'); };
   m.querySelector('#m_rev').onclick = conRuedaFn(function () { return revisarVariablesUnidad(x); });
-  var perSel = m.querySelector('#m_perfil'); if (perSel) perSel.onchange = function () { var pf = rpmGuardados[this.value]; if (!pf) return; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var b = pf[tr.getAttribute('data-b')] || {}; tr.querySelector('.b_de').value = b.de === undefined ? '' : b.de; var a = tr.querySelector('.b_a'); if (a) a.value = b.a === undefined ? '' : b.a; tr.querySelector('.b_c').value = b.cond || 'AMBOS'; }); };
-  var pgu = m.querySelector('#m_pgu'); if (pgu) pgu.onclick = conRuedaFn(async function () {
-    var nom = m.querySelector('#m_pnom').value.trim(), r = leerRangos(), er = validarRangosJs(r), e = m.querySelector('#m_err');
-    if (!nom) { e.style.display = 'block'; e.textContent = 'Escribe un nombre para el perfil.'; return; }
-    if (er.length) { e.style.display = 'block'; e.textContent = er.join(' '); return; }
-    e.style.display = 'none'; rpmGuardados[nom] = r;
-    var o = await ejecutar(function () { return api('config_set', { config: { RPM_PERFILES: JSON.stringify(rpmGuardados) } }, uCtx.clave); }, 'Perfil de rangos «' + nom + '» guardado');
-    if (o) window.__cfgRpm = JSON.stringify(rpmGuardados);
-  });
+  var perSel = m.querySelector('#m_perfil'); if (perSel) perSel.onchange = function () { var pf = rpmGuardados[this.value]; if (!pf) return; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var b = pf[tr.getAttribute('data-b')] || {}; tr.querySelector('.b_de').value = b.de === undefined ? '' : b.de; var a = tr.querySelector('.b_a'); if (a) a.value = b.a === undefined ? '' : b.a; tr.querySelector('.b_c').value = b.cond || 'AMBOS'; }); var pn = m.querySelector('#m_pnom'); if (pn) pn.value = this.value; };
   m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); var rr2 = m.querySelector('#m_rangos'); if (rr2) rr2.style.display = 'none'; toast('Restablecido. Pulsa «Aceptar».'); };
-  m.querySelector('#o_ok').onclick = function () {
+  m.querySelector('#o_ok').onclick = conRuedaFn(async function () {
     var r = {}, d = {}, u = {};
     m.querySelectorAll('select[data-rol]').forEach(function (sel) { if (sel.value) r[sel.getAttribute('data-rol')] = sel.value; });
     m.querySelectorAll('tr[data-var]').forEach(function (tr) {
@@ -659,14 +663,23 @@ function unidadAvanzada(i) {
     });
     var vo = function (id) { var e = m.querySelector('#' + id); return e ? e.value : ''; };
     var modo = vo('m_rpm');
-    if (modo === 'RANGOS') { var rg = leerRangos(), er = validarRangosJs(rg); if (er.length) { var me = m.querySelector('#m_err'); me.style.display = 'block'; me.textContent = er.join(' '); return; } x.rpm_rangos = JSON.stringify(rg); }
+    if (modo === 'RANGOS') { var rg = leerRangos(), er = validarRangosJs(rg); if (er.length) { var me = m.querySelector('#m_err'); me.style.display = 'block'; me.textContent = er.join(' '); return; } 
+      var nomR = m.querySelector('#m_pnom').value.trim(); if (!nomR) { me = m.querySelector('#m_err'); me.style.display = 'block'; me.textContent = 'Escribe el nombre del rango (obligatorio): así lo reconoces en la lista y puedes reutilizarlo.'; return; }
+      var guardado = JSON.stringify(rpmGuardados[nomR] || null), nuevoPf = JSON.stringify(rg);
+      if (guardado !== nuevoPf) {   // el rango queda guardado con su nombre para reutilizarlo
+        var copia = Object.assign({}, rpmGuardados); copia[nomR] = rg;
+        var og = await ejecutar(function () { return api('config_set', { config: { RPM_PERFILES: JSON.stringify(copia) } }, uCtx.clave); }); if (!og) return;
+        rpmGuardados = copia; window.__cfgRpm = JSON.stringify(copia);
+      }
+      x.rpm_rangos = JSON.stringify(Object.assign({}, rg, { nombre: nomR }));
+    }
     x.origen = vo('m_origen'); if (!elec) { x.consumo_fuente = vo('m_cons'); x.rpm_modo = modo; }
     x.reglas_ids = Object.keys(r).length ? JSON.stringify(r) : '';
     x.diag_ids = Object.keys(d).length ? JSON.stringify(d) : '';
     x.unidades_origen = Object.keys(u).length ? JSON.stringify(u) : '';
     cerrarModal(); toast('Listo. Pulsa «Guardar cambios» en la lista de unidades.');
     var mm = pila[pila.length - 1]; if (mm) { leerUnidadesPantalla(mm); pintarUnidades(false); }
-  };
+  });
 }
 
 /* ---------- emisión manual ---------- */
@@ -989,14 +1002,46 @@ async function vistaReglas(conservarClave) {
   var dg = await ejecutar(function () { return api('diagnosticos_listar'); });
   if (!rg || !pf || !dg) { adminClave = null; ir('clientes'); return; }
   cache.reglas = rg; cache.perfiles = pf;
+  var cfgR = await ejecutar(function () { return api('config_get'); }); window.__cfgRpm = (cfgR && cfgR.RPM_PERFILES) || '{}';
+  window.__usoRpm = await ejecutar(function () { return api('rpm_perfiles_uso', {}, adminClave); }) || {};
   var nombreRegla = {}; rg.reglas.forEach(function (r) { nombreRegla[r.id_regla] = r.nombre; });
   $('app').innerHTML =
     '<div class="tarjeta"><div class="fila sep"><h2>Biblioteca de reglas</h2><button class="btn ambar chico" data-act="formRegla">' + ic('plus') + ' Nueva regla</button></div><p class="peq">El «rol» le dice al sistema para qué sirve cada regla de MyGeotab.</p><div class="tabla-wrap"><table><thead><tr><th>Id de regla</th><th>Nombre</th><th>Categoría</th><th>Rol</th><th></th></tr></thead><tbody>' +
     rg.reglas.map(function (r, i) { return '<tr><td class="peq">' + esc(r.id_regla) + '</td><td>' + esc(r.nombre) + '</td><td>' + esc(r.categoria) + '</td><td><span class="chip azul">' + esc(r.rol) + '</span></td><td style="white-space:nowrap"><button class="btn chico sec" data-act="formRegla" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarRegla" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
     '<div class="tarjeta"><div class="fila sep"><h2>Perfiles de motor</h2><button class="btn ambar chico" data-act="formPerfil">' + ic('plus') + ' Nuevo perfil</button></div><div class="tabla-wrap"><table><thead><tr><th>Perfil</th>' + pf.roles.map(function (r) { return '<th>' + esc(r) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
     pf.perfiles.map(function (p, i) { return '<tr><td><b>' + esc(p.perfil) + '</b></td>' + pf.roles.map(function (r) { return '<td class="peq">' + esc(nombreRegla[p[r]] || p[r] || '—') + '</td>'; }).join('') + '<td style="white-space:nowrap"><button class="btn chico sec" data-act="formPerfil" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarPerfil" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
+    seccionRangosRpm() +
     '<div class="tarjeta"><h2>Diagnósticos y unidad de origen</h2><p class="peq">La unidad de origen la eliges tú; el sistema nunca la adivina. También se puede cambiar por unidad en «Unidades › Avanzado».</p><div class="tabla-wrap"><table><thead><tr><th>Dato</th><th>Id del diagnóstico</th><th>Unidad de origen</th><th></th></tr></thead><tbody>' +
     dg.diagnosticos.map(function (d) { return '<tr data-k="' + esc(d.clave) + '"><td>' + esc(d.etiqueta) + '</td><td><input class="d_id" style="width:100%;min-width:220px" value="' + esc(d.id_diagnostico) + '"></td><td><select class="d_un">' + String(d.unidades_posibles).split(',').map(function (u) { return '<option' + (u === d.unidad_origen ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></td><td><button class="btn chico" data-act="guardarDiag">Guardar</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
+}
+function seccionRangosRpm() {
+  var pg = {}; try { pg = JSON.parse(window.__cfgRpm || '{}') || {}; } catch (e) {}
+  var uso = window.__usoRpm || {}, nombres = Object.keys(pg);
+  var cel = function (b) { b = b || {}; return '<td class="peq">' + esc(b.de) + (b.a !== undefined && b.a !== '' ? ' – ' + esc(b.a) : ' en adelante') + (b.cond && b.cond !== 'AMBOS' ? '<br>' + (b.cond === 'MOV' ? 'en movimiento' : 'detenido') : '') + '</td>'; };
+  return '<div class="tarjeta"><div class="fila sep"><h2>Perfiles de rangos RPM propios</h2><button class="btn ambar chico" data-act="formRangoRpm">' + ic('plus') + ' Nuevo rango</button></div>' +
+    '<p class="peq">Rangos de RPM con nombre para reutilizar en «Unidades › Avanzado › RPM › Rangos propios». Cada unidad guarda su propia copia: editar o quitar un rango aquí no cambia las unidades que ya lo usan.</p>' +
+    (nombres.length ? '<div class="tabla-wrap"><table><thead><tr><th>Nombre</th><th>Ralentí</th><th>Bajo</th><th>Económico</th><th>Potencia</th><th>Exceso</th><th>Unidades que lo usan</th><th></th></tr></thead><tbody>' +
+      nombres.map(function (n, i) { var p = pg[n] || {}; return '<tr><td><b>' + esc(n) + '</b></td>' + cel(p.ral) + cel(p.bajo) + cel(p.eco) + cel(p.pot) + cel(p.exc) + '<td>' + (uso[n] ? '<span class="chip azul">' + uso[n] + (uso[n] === 1 ? ' unidad' : ' unidades') + '</span>' : '<span class="peq">ninguna</span>') + '</td><td style="white-space:nowrap"><button class="btn chico sec" data-act="formRangoRpm" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarRangoRpm" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div>'
+      : '<div class="vacio peq">Aún no hay rangos guardados. Crea uno con «Nuevo rango» o desde Unidades › Avanzado.</div>') + '</div>';
+}
+function formRangoRpm(i) {
+  var pg = {}; try { pg = JSON.parse(window.__cfgRpm || '{}') || {}; } catch (e) {}
+  var nombres = Object.keys(pg), nuevo = i === undefined, nom = nuevo ? '' : nombres[i], r = nuevo ? rangosVacios() : Object.assign(rangosVacios(), pg[nom]);
+  var m = abrirModal('<h3>' + (nuevo ? 'Nuevo rango de RPM' : 'Editar rango · ' + esc(nom)) + '</h3><label>Nombre del rango</label><input id="rr_n" value="' + esc(nom) + '"' + (nuevo ? '' : ' disabled') + ' placeholder="Ej.: Camión 6x4 carga pesada">' +
+    '<p class="peq">Cada rango empieza donde termina el anterior. Solo cuentan lecturas con ignición encendida. «Condición»: en movimiento, detenido o ambos.</p>' +
+    '<div class="tabla-wrap"><table><thead><tr><th>Rango</th><th>Desde (RPM)</th><th>Hasta (RPM)</th><th>Condición</th></tr></thead><tbody>' +
+    BANDAS_TXT.map(function (b) { var x = r[b[0]] || {}; return '<tr data-b="' + b[0] + '"><td>' + b[1] + '</td><td><input class="b_de" size="6" value="' + esc(x.de) + '"></td><td>' + (b[0] === 'exc' ? '<span class="peq">en adelante</span>' : '<input class="b_a" size="6" value="' + esc(x.a) + '">') + '</td><td><select class="b_c">' + [['AMBOS', 'Ambos'], ['MOV', 'En movimiento'], ['DET', 'Detenido']].map(function (f) { return '<option value="' + f[0] + '"' + ((x.cond || 'AMBOS') === f[0] ? ' selected' : '') + '>' + f[1] + '</option>'; }).join('') + '</select></td></tr>'; }).join('') + '</tbody></table></div>' +
+    '<div class="msg mal" id="rr_err" style="display:none"></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cancelar</button><button class="btn" id="rr_ok">Guardar</button></div>', 'medio');
+  m.querySelector('#rr_ok').onclick = conRuedaFn(async function () {
+    var n = m.querySelector('#rr_n').value.trim(), e = m.querySelector('#rr_err'), rg = {};
+    m.querySelectorAll('tr[data-b]').forEach(function (tr) { var k = tr.getAttribute('data-b'), a = tr.querySelector('.b_a'); rg[k] = { de: tr.querySelector('.b_de').value.trim(), cond: tr.querySelector('.b_c').value }; if (a) rg[k].a = a.value.trim(); });
+    var er = validarRangosJs(rg); if (!n) er.unshift('Escribe el nombre del rango.');
+    if (nuevo && pg[n] !== undefined) er.unshift('Ya existe un rango con ese nombre.');
+    if (er.length) { e.style.display = 'block'; e.textContent = er.join(' '); return; }
+    var copia = Object.assign({}, pg); copia[n] = rg;
+    var o = await ejecutar(function () { return api('config_set', { config: { RPM_PERFILES: JSON.stringify(copia) } }, adminClave); }, 'Rango «' + n + '» guardado');
+    if (o) { cerrarModal(); vistaReglas(true); }
+  });
 }
 function formRegla(i) {
   var r = i === undefined ? {} : cache.reglas.reglas[i];
@@ -1099,6 +1144,7 @@ var G_USO = [
   ['Revisar lo enviado', '<p><b>Emisiones</b> › buscador por cliente o fecha: ves destinatarios, estado, fecha de envío y el enlace al PDF. <b>Reglas</b> y <b>Configuración</b> (días de corte, hora, umbrales, textos del correo) piden la contraseña de administrador al entrar y se pueden editar solo después de ingresarla.</p>']
 ];
 var G_FALLA = [
+  ['Rangos de RPM propios con nombre', '<p>Cada rango propio de RPM lleva un nombre. Puedes crearlo en Reglas › «Perfiles de rangos RPM propios» o directamente en Unidades › Avanzado › RPM › Rangos propios (al aceptar queda guardado con su nombre). En la tabla de Unidades, bajo el perfil de motor, se ve el nombre del rango que usa cada unidad. En Reglas ves cuántas unidades usan cada uno y puedes editarlo o quitarlo; cada unidad conserva su propia copia, así que editar o quitar un rango no cambia las unidades que ya lo usan.</p>'],
   ['Unidad sin operación en el periodo (Ignorar)', '<p>Si una unidad no se movió en el periodo y por eso el sistema retiene la emisión, en el cuadro de Problemas marca «Ignorar (sin operación)» junto a esa unidad y pulsa «Generar con lo que hay». La unidad sigue en el PDF pero con guiones en todas sus mediciones, notas y tablas, y no cuenta en totales ni rankings. Es manual y solo afecta a esa emisión (se puede quitar con «Quitar ignorar»). Si el problema es una falla de datos y no falta de operación, no la ignores: usa variable alterna o kilometraje GPS. Para dejar de incluirla en los siguientes informes, ponla Inactiva en Unidades.</p>'],
   ['Quedó RETENIDO (dato dudoso o faltante)', 'Abre la emisión y lee los problemas. Corrige el dato a mano o usa «Traer todo de nuevo». Luego «Validar de nuevo» → «Generar vista previa» → «Enviar al cliente».'],
   ['La extracción se detuvo o no avanza', 'Pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído. Si MyGeotab estuvo caído, vuelve a intentarlo cuando regrese.'],
@@ -1200,6 +1246,14 @@ var ACT = {
   borrarBase: async function (d) { var b = cache.basesAdm[Number(d.i)]; if (!confirm('¿Eliminar la base «' + b.nombre + '»?')) return; var r = await ejecutar(function () { return api('admin_base_eliminar', { id: b.id }, adminClave); }, 'Eliminada'); if (r) recargarBases(); },
   formRegla: function (d) { formRegla(d.i === undefined ? undefined : Number(d.i)); },
   borrarRegla: async function (d) { var r = cache.reglas.reglas[Number(d.i)]; if (!confirm('¿Quitar la regla «' + r.nombre + '»?')) return; var o = await ejecutar(function () { return api('regla_eliminar', { id_regla: r.id_regla }, adminClave); }, 'Regla quitada'); if (o) vistaReglas(true); },
+  formRangoRpm: function (d) { formRangoRpm(d.i === undefined ? undefined : Number(d.i)); },
+  borrarRangoRpm: async function (d) {
+    var pg = {}; try { pg = JSON.parse(window.__cfgRpm || '{}') || {}; } catch (e) {}
+    var n = Object.keys(pg)[Number(d.i)], u = (window.__usoRpm || {})[n] || 0;
+    if (!confirm('¿Quitar el rango «' + n + '»?' + (u ? ' Lo usan ' + u + ' unidad(es): conservan su copia y siguen midiendo igual, solo deja de estar disponible para copiar.' : ''))) return;
+    delete pg[n];
+    var o = await ejecutar(function () { return api('config_set', { config: { RPM_PERFILES: JSON.stringify(pg) } }, adminClave); }, 'Rango quitado'); if (o) vistaReglas(true);
+  },
   formPerfil: function (d) { formPerfil(d.i === undefined ? undefined : Number(d.i)); },
   borrarPerfil: async function (d) { var p = cache.perfiles.perfiles[Number(d.i)]; if (!confirm('¿Quitar el perfil «' + p.perfil + '»?')) return; var o = await ejecutar(function () { return api('perfil_eliminar', { perfil: p.perfil }, adminClave); }, 'Perfil quitado'); if (o) vistaReglas(true); },
   guardarDiag: function (d, b) { var tr = b.closest('tr'); return ejecutar(function () { return api('diagnostico_guardar', { diagnostico: { clave: tr.getAttribute('data-k'), id_diagnostico: tr.querySelector('.d_id').value, unidad_origen: tr.querySelector('.d_un').value } }, adminClave); }, 'Diagnóstico guardado'); }
