@@ -594,6 +594,7 @@ function leerUnidadesPantalla(m) {
     x.estado = tr.querySelector('.f_est').value; x.rend_max = tr.querySelector('.f_rmax').value; x.rend_min = tr.querySelector('.f_rmin').value;
   });
 }
+var ROLES_RPM_AV = { rpm_bajo: 1, rpm_economico: 1, rpm_potencia: 1, sobrerrevolucion: 1, ralenti_rpm: 1 };
 var ROL_TXT = { velocidad_mayor_80: 'Velocidad mayor a 80 km/h', aceleracion_brusca: 'Aceleración brusca', frenada_brusca: 'Frenada brusca', giro_brusco: 'Giro brusco', rpm_bajo: 'RPM · Rango bajo', rpm_economico: 'RPM · Rango económico', rpm_potencia: 'RPM · Rango potencia', sobrerrevolucion: 'Sobrerrevoluciones', ralenti_rpm: 'Ralentí (RPM)' };
 var VAR_TXT = { ODO: 'Odómetro (distancia)', COMB: 'Combustible', HMOT: 'Horas de motor', HRAL: 'Horas en ralentí', CRAL: 'Consumo en ralentí', COMB_ALT: 'Consumo · variable alterna', CRAL_ALT: 'Consumo en ralentí · variable alterna', E_MOV: 'Energía en movimiento', E_RAL: 'Energía en ralentí', E_REG: 'Energía regenerada', SOC: 'Estado de carga', IGN: 'Ignición', RPM: 'RPM del motor' };
 var BANDAS_TXT = [['ral', 'Ralentí'], ['bajo', 'Bajo torque'], ['eco', 'Económico (banda verde)'], ['pot', 'Potencia'], ['exc', 'Exceso de RPM']];
@@ -683,7 +684,7 @@ function unidadAvanzada(i) {
     '<div class="sec-t" style="margin-top:14px">Reglas de MyGeotab (todas)</div><div class="cols">' +
     uCtx.roles.map(function (r) {
       var porPerfil = perfil[r] ? (nombreRegla[perfil[r]] || perfil[r]) : 'ninguna';
-      return '<div><label>' + esc(ROL_TXT[r] || r) + '</label><select data-rol="' + esc(r) + '"><option value="">Según perfil: ' + esc(porPerfil) + '</option>' +
+      return '<div class="' + (ROLES_RPM_AV[r] ? 'rol-rpm' : '') + '"><label>' + esc(ROL_TXT[r] || r) + '</label><select data-rol="' + esc(r) + '"><option value="">Según perfil: ' + esc(porPerfil) + '</option>' +
         uCtx.reglas.map(function (g) { return '<option value="' + esc(g.id_regla) + '"' + (ro[r] === g.id_regla ? ' selected' : '') + '>' + esc(g.nombre) + ' · ' + esc(g.categoria) + '</option>'; }).join('') + '</select></div>';
     }).join('') + '</div>' +
     '<div class="sec-t" style="margin-top:16px">Variables de medición (id del diagnóstico y unidad en que llega)</div><div class="tabla-wrap"><table><thead><tr><th>Variable</th><th>Id del diagnóstico</th><th>Unidad de origen</th></tr></thead><tbody>' +
@@ -700,14 +701,15 @@ function unidadAvanzada(i) {
   var avGps = m.querySelector('#m_avgps'), selOr = m.querySelector('#m_origen'), selCo = m.querySelector('#m_cons');
   var mostrarAvGps = function () { if (avGps) avGps.style.display = (selOr.value === 'GPS' && selCo && selCo.value === '') ? 'block' : 'none'; };
   selOr.onchange = mostrarAvGps; mostrarAvGps();
-  var rpmSel = m.querySelector('#m_rpm'); if (rpmSel) rpmSel.onchange = function () { m.querySelector('#m_rangos').style.display = this.value === 'RANGOS' ? 'block' : 'none'; };
+  var rpmSel = m.querySelector('#m_rpm'); var verRpm = function () { var v = rpmSel ? rpmSel.value : ''; var rg = m.querySelector('#m_rangos'); if (rg) rg.style.display = v === 'RANGOS' ? 'block' : 'none'; m.querySelectorAll('.rol-rpm').forEach(function (d) { d.style.display = v === '' ? '' : 'none'; }); };   // con rangos propios o sin RPM no se eligen reglas de RPM
+  if (rpmSel) rpmSel.onchange = verRpm; verRpm();
   var consSel = m.querySelector('#m_cons'); if (consSel) consSel.onchange = function () { mostrarAvGps(); if (this.value === 'ALTERNA') toast('Pulsa «Aceptar» y vuelve a abrir Avanzado para ver las variables alternas.'); };
   m.querySelector('#m_rev').onclick = conRuedaFn(function () { return revisarVariablesUnidad(x); });
   var perSel = m.querySelector('#m_perfil'); if (perSel) perSel.onchange = function () { var pf = rpmGuardados[this.value]; if (!pf) return; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var b = pf[tr.getAttribute('data-b')] || {}; tr.querySelector('.b_de').value = b.de === undefined ? '' : b.de; var a = tr.querySelector('.b_a'); if (a) a.value = b.a === undefined ? '' : b.a; tr.querySelector('.b_c').value = b.cond || 'AMBOS'; }); var pn = m.querySelector('#m_pnom'); if (pn) pn.value = this.value; };
   m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); var rr2 = m.querySelector('#m_rangos'); if (rr2) rr2.style.display = 'none'; toast('Restablecido. Pulsa «Aceptar».'); };
   m.querySelector('#o_ok').onclick = conRuedaFn(async function () {
     var r = {}, d = {}, u = {};
-    m.querySelectorAll('select[data-rol]').forEach(function (sel) { if (sel.value) r[sel.getAttribute('data-rol')] = sel.value; });
+    m.querySelectorAll('select[data-rol]').forEach(function (sel) { if (sel.closest('.rol-rpm') && sel.closest('.rol-rpm').style.display === 'none') return; if (sel.value) r[sel.getAttribute('data-rol')] = sel.value; });
     m.querySelectorAll('tr[data-var]').forEach(function (tr) {
       var k = tr.getAttribute('data-var'), id = tr.querySelector('.v_id').value.trim(), un = tr.querySelector('.v_un').value;
       if (id) d[k] = id; if (un) u[k] = un;
