@@ -532,7 +532,7 @@ function pintarUnidades(nuevo) {
       if (uCtx.texto && (x.placa + ' ' + x.nombre_geotab).toLowerCase().indexOf(uCtx.texto.toLowerCase()) < 0) return '';
       var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids || x.origen || x.consumo_fuente || x.rpm_modo;
       return '<tr data-i="' + i + '"><td><input type="checkbox" class="u_sel"></td><td><input class="f_placa" size="9" value="' + esc(x.placa) + '"></td><td class="peq">' + esc(x.nombre_geotab) + '</td>' +
-        '<td><select class="f_perfil"><option value=""></option>' + uCtx.perfiles.map(function (p) { return '<option' + (p === x.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' + selectorRpmFila(x) + '</td>' +
+        '<td>' + selectPerfilFila(x) + '</td>' +
         '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option><option' + (x.combustible === 'ELECTRICO' ? ' selected' : '') + '>ELECTRICO</option></select>' + etiquetaMedicion(x) + '</td>' +
         '<td><select class="f_est">' + ['ACTIVO', 'PENDIENTE', 'INACTIVO'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></td>' +
         '<td><input class="f_rmax" size="4" value="' + esc(x.rend_max) + '"></td><td><input class="f_rmin" size="4" value="' + esc(x.rend_min) + '"></td>' +
@@ -562,11 +562,11 @@ function pintarUnidades(nuevo) {
     var p = m.querySelector('#u_perfil').value, c = m.querySelector('#u_comb').value, e = m.querySelector('#u_est').value, k = 0;
     m.querySelectorAll('tr[data-i]').forEach(function (tr) {
       if (!tr.querySelector('.u_sel').checked) return; k++;
-      if (p) tr.querySelector('.f_perfil').value = p; if (c) tr.querySelector('.f_comb').value = c; if (e) tr.querySelector('.f_est').value = e;
-      var fr = tr.querySelector('.f_rpm');
-      if (rm === 'REGLA') { tr.querySelector('.f_perfil').value = rl; if (fr) fr.value = ''; }          // reglas del perfil elegido
-      else if (rm === 'MANUAL' && fr) fr.value = 'R:' + rl;                                           // rango propio
-      else if (rm === 'SIN' && fr) fr.value = 'SIN';
+      var fp = tr.querySelector('.f_perfil');
+      if (p) fijarSelect(fp, p); if (c) tr.querySelector('.f_comb').value = c; if (e) tr.querySelector('.f_est').value = e;
+      if (rm === 'REGLA') fijarSelect(fp, rl);              // perfil de motor: RPM por regla
+      else if (rm === 'MANUAL') fijarSelect(fp, 'R:' + rl); // rango propio: RPM manual
+      else if (rm === 'SIN') fijarSelect(fp, 'SIN');
     });
     toast(k ? 'Aplicado a ' + k + ' unidades. Pulsa «Guardar cambios».' : 'Marca primero las unidades.');
   };
@@ -582,14 +582,14 @@ function avisoLimite(msg) {
 function leerUnidadesPantalla(m) {
   m.querySelectorAll('tr[data-i]').forEach(function (tr) {
     var x = uCtx.unidades[Number(tr.getAttribute('data-i'))];
-    x.placa = tr.querySelector('.f_placa').value; x.perfil = tr.querySelector('.f_perfil').value; x.combustible = tr.querySelector('.f_comb').value;
-    var fr = tr.querySelector('.f_rpm');
-    if (fr && fr.value !== fr.dataset.orig && fr.value !== 'KEEP') {   // solo si se cambió el RPM de la fila
+    x.placa = tr.querySelector('.f_placa').value; x.combustible = tr.querySelector('.f_comb').value;
+    var fp = tr.querySelector('.f_perfil'), vp = fp.value;
+    if (vp !== fp.dataset.orig && vp !== 'KEEP') {   // solo si se cambió el cuadro de Perfil / RPM de la fila
       var pgR = rpmGuardadosPantalla();
-      if (fr.value === '') { x.rpm_modo = ''; }
-      else if (fr.value === 'SIN') { x.rpm_modo = 'SIN'; }
-      else if (fr.value.indexOf('R:') === 0 && pgR[fr.value.slice(2)]) { x.rpm_modo = 'RANGOS'; x.rpm_rangos = JSON.stringify(Object.assign({}, pgR[fr.value.slice(2)], { nombre: fr.value.slice(2) })); }
-      fr.dataset.orig = fr.value;
+      if (vp === 'SIN') { x.rpm_modo = 'SIN'; }                                  // sin RPM (conserva su perfil de motor)
+      else if (vp.indexOf('R:') === 0 && pgR[vp.slice(2)]) { x.rpm_modo = 'RANGOS'; x.perfil = ''; x.rpm_rangos = JSON.stringify(Object.assign({}, pgR[vp.slice(2)], { nombre: vp.slice(2) })); }   // rango propio: solo RPM, el resto se configura en Avanzado
+      else { x.perfil = vp; x.rpm_modo = ''; }                                   // perfil de motor: RPM y demás reglas por perfil
+      fp.dataset.orig = vp;
     }
     x.estado = tr.querySelector('.f_est').value; x.rend_max = tr.querySelector('.f_rmax').value; x.rend_min = tr.querySelector('.f_rmin').value;
   });
@@ -637,17 +637,24 @@ function valorRpmFila(x) {
   }
   return nom && pg[nom] ? 'R:' + nom : 'KEEP';
 }
-function opcionesRpm(actual) {
-  var pg = rpmGuardadosPantalla(), o = [['', 'RPM: reglas del perfil'], ['SIN', 'RPM: sin RPM']];
-  Object.keys(pg).forEach(function (n) { o.push(['R:' + n, 'Rango: ' + n]); });
-  if (actual === 'KEEP') o.push(['KEEP', 'Rangos propios (sin nombre)']);
-  return o.map(function (a) { return '<option value="' + esc(a[0]) + '"' + (a[0] === actual ? ' selected' : '') + '>' + esc(a[1]) + '</option>'; }).join('');
-}
-function selectorRpmFila(x) {
-  if (x.combustible === 'ELECTRICO') return '';
+/** Un solo cuadro por fila: perfil de motor (RPM por regla), rango propio (RPM manual) o sin RPM. */
+function valorPerfilFila(x) {
   var v = valorRpmFila(x);
-  return '<select class="f_rpm" data-orig="' + esc(v) + '" style="margin-top:4px;font-size:12px">' + opcionesRpm(v) + '</select>';
+  if (v === 'SIN' || v.indexOf('R:') === 0 || v === 'KEEP') return v;
+  return x.perfil || '';
 }
+function selectPerfilFila(x) {
+  var elec = String(x.combustible).toUpperCase() === 'ELECTRICO', v = valorPerfilFila(x), pg = rpmGuardadosPantalla(), o = '<option value=""></option>';
+  var op = function (val, txt) { return '<option value="' + esc(val) + '"' + (val === v ? ' selected' : '') + '>' + esc(txt) + '</option>'; };
+  o += '<optgroup label="Perfil de motor (RPM por regla)">' + uCtx.perfiles.map(function (n) { return op(n, n); }).join('') + '</optgroup>';
+  if (!elec) {
+    var rs = Object.keys(pg);
+    if (rs.length || v.indexOf('R:') === 0 || v === 'KEEP') o += '<optgroup label="Rango propio (RPM manual)">' + rs.map(function (n) { return op('R:' + n, n); }).join('') + (v === 'KEEP' ? op('KEEP', 'Rangos propios (sin nombre)') : '') + '</optgroup>';
+    o += '<optgroup label="Sin RPM">' + op('SIN', 'Sin RPM') + '</optgroup>';
+  }
+  return '<select class="f_perfil" data-orig="' + esc(v) + '">' + o + '</select>';
+}
+function fijarSelect(sel, val) { if (sel && Array.prototype.some.call(sel.options, function (op) { return op.value === val; })) sel.value = val; }
 function unidadAvanzada(i) {
   var x = uCtx.unidades[i];
   var ro, dg, uo;
