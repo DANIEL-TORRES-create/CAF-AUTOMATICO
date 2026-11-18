@@ -1005,14 +1005,31 @@ async function vistaReglas(conservarClave) {
   var cfgR = await ejecutar(function () { return api('config_get'); }); window.__cfgRpm = (cfgR && cfgR.RPM_PERFILES) || '{}';
   window.__usoRpm = await ejecutar(function () { return api('rpm_perfiles_uso', {}, adminClave); }) || {};
   var nombreRegla = {}; rg.reglas.forEach(function (r) { nombreRegla[r.id_regla] = r.nombre; });
-  $('app').innerHTML =
-    '<div class="tarjeta"><div class="fila sep"><h2>Biblioteca de reglas</h2><button class="btn ambar chico" data-act="formRegla">' + ic('plus') + ' Nueva regla</button></div><p class="peq">El «rol» le dice al sistema para qué sirve cada regla de MyGeotab.</p><div class="tabla-wrap"><table><thead><tr><th>Id de regla</th><th>Nombre</th><th>Categoría</th><th>Rol</th><th>Texto en el PDF</th><th></th></tr></thead><tbody>' +
-    rg.reglas.map(function (r, i) { return '<tr><td class="peq">' + esc(r.id_regla) + '</td><td>' + esc(r.nombre) + '</td><td>' + esc(r.categoria) + '</td><td><span class="chip azul">' + esc(r.rol) + '</span></td><td class="peq">' + (r.texto_pdf ? esc(r.texto_pdf) : '—') + '</td><td style="white-space:nowrap"><button class="btn chico sec" data-act="formRegla" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarRegla" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
-    '<div class="tarjeta"><div class="fila sep"><h2>Perfiles de motor</h2><button class="btn ambar chico" data-act="formPerfil">' + ic('plus') + ' Nuevo perfil</button></div><div class="tabla-wrap"><table><thead><tr><th>Perfil</th>' + pf.roles.map(function (r) { return '<th>' + esc(r) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
-    pf.perfiles.map(function (p, i) { return '<tr><td><b>' + esc(p.perfil) + '</b></td>' + pf.roles.map(function (r) { return '<td class="peq">' + esc(nombreRegla[p[r]] || p[r] || '—') + '</td>'; }).join('') + '<td style="white-space:nowrap"><button class="btn chico sec" data-act="formPerfil" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarPerfil" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' +
-    seccionRangosRpm() +
-    '<div class="tarjeta"><h2>Diagnósticos y unidad de origen</h2><p class="peq">La unidad de origen la eliges tú; el sistema nunca la adivina. También se puede cambiar por unidad en «Unidades › Avanzado».</p><div class="tabla-wrap"><table><thead><tr><th>Dato</th><th>Id del diagnóstico</th><th>Unidad de origen</th><th></th></tr></thead><tbody>' +
-    dg.diagnosticos.map(function (d) { return '<tr data-k="' + esc(d.clave) + '"><td>' + esc(d.etiqueta) + '</td><td><input class="d_id" style="width:100%;min-width:220px" value="' + esc(d.id_diagnostico) + '"></td><td><select class="d_un">' + String(d.unidades_posibles).split(',').map(function (u) { return '<option' + (u === d.unidad_origen ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></td><td><button class="btn chico" data-act="guardarDiag">Guardar</button></td></tr>'; }).join('') + '</tbody></table></div></div>';
+  var ROL_RPM = { rpm_bajo: 1, rpm_economico: 1, rpm_potencia: 1, sobrerrevolucion: 1, ralenti_rpm: 1 };
+  var filaRegla = function (r, i) { return '<tr><td class="peq">' + esc(r.id_regla) + '</td><td>' + esc(r.nombre) + '</td><td>' + esc(r.categoria) + '</td><td><span class="chip azul">' + esc(r.rol) + '</span></td><td class="peq">' + (r.texto_pdf ? esc(r.texto_pdf) : '—') + '</td><td style="white-space:nowrap"><button class="btn chico sec" data-act="formRegla" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarRegla" data-i="' + i + '">Quitar</button></td></tr>'; };
+  var tablaReglas = function (titulo, ayuda, esRpm) {
+    var filas = rg.reglas.map(function (r, i) { return { r: r, i: i }; }).filter(function (x) { return !!ROL_RPM[x.r.rol] === esRpm; });
+    return { n: filas.length, html: '<div class="tarjeta"><div class="fila sep"><h2>' + titulo + '</h2><button class="btn ambar chico" data-act="formRegla">' + ic('plus') + ' Nueva regla</button></div><p class="peq">' + ayuda + ' El «rol» le dice al sistema para qué sirve cada regla de MyGeotab; «Texto en el PDF» es la condición que se imprime en el recuadro de criterios.</p>' +
+      (filas.length ? '<div class="tabla-wrap"><table>' + "<thead><tr><th>Id de regla</th><th>Nombre</th><th>Categoría</th><th>Rol</th><th>Texto en el PDF</th><th></th></tr></thead>" + '<tbody>' + filas.map(function (x) { return filaRegla(x.r, x.i); }).join('') + '</tbody></table></div>' : '<div class="vacio peq">No hay reglas en esta categoría.</div>') + '</div>' };
+  };
+  var tSeg = tablaReglas('Reglas de seguridad', 'Velocidad, giro, aceleración y frenada.', false), tRpm = tablaReglas('Reglas de RPM', 'Rango bajo, económico, potencia, sobrerrevoluciones y ralentí.', true);
+  var nRangos = 0; try { nRangos = Object.keys(JSON.parse(window.__cfgRpm || '{}') || {}).length; } catch (e) {}
+  reglasVista = {
+    SEG: { t: 'Seguridad', n: tSeg.n, h: tSeg.html },
+    RPM: { t: 'RPM', n: tRpm.n, h: tRpm.html },
+    MOT: { t: 'Perfiles de motor', n: pf.perfiles.length, h:     '<div class="tarjeta"><div class="fila sep"><h2>Perfiles de motor</h2><button class="btn ambar chico" data-act="formPerfil">' + ic('plus') + ' Nuevo perfil</button></div><div class="tabla-wrap"><table><thead><tr><th>Perfil</th>' + pf.roles.map(function (r) { return '<th>' + esc(r) + '</th>'; }).join('') + '<th></th></tr></thead><tbody>' +
+    pf.perfiles.map(function (p, i) { return '<tr><td><b>' + esc(p.perfil) + '</b></td>' + pf.roles.map(function (r) { return '<td class="peq">' + esc(nombreRegla[p[r]] || p[r] || '—') + '</td>'; }).join('') + '<td style="white-space:nowrap"><button class="btn chico sec" data-act="formPerfil" data-i="' + i + '">Editar</button> <button class="btn chico rojo" data-act="borrarPerfil" data-i="' + i + '">Quitar</button></td></tr>'; }).join('') + '</tbody></table></div></div>'  },
+    PRO: { t: 'Rangos RPM propios', n: nRangos, h: seccionRangosRpm() },
+    ECM: { t: 'ECM (diagnósticos)', n: dg.diagnosticos.length, h:     '<div class="tarjeta"><h2>Diagnósticos y unidad de origen</h2><p class="peq">La unidad de origen la eliges tú; el sistema nunca la adivina. También se puede cambiar por unidad en «Unidades › Avanzado».</p><div class="tabla-wrap"><table><thead><tr><th>Dato</th><th>Id del diagnóstico</th><th>Unidad de origen</th><th></th></tr></thead><tbody>' +
+    dg.diagnosticos.map(function (d) { return '<tr data-k="' + esc(d.clave) + '"><td>' + esc(d.etiqueta) + '</td><td><input class="d_id" style="width:100%;min-width:220px" value="' + esc(d.id_diagnostico) + '"></td><td><select class="d_un">' + String(d.unidades_posibles).split(',').map(function (u) { return '<option' + (u === d.unidad_origen ? ' selected' : '') + '>' + esc(u) + '</option>'; }).join('') + '</select></td><td><button class="btn chico" data-act="guardarDiag">Guardar</button></td></tr>'; }).join('') + '</tbody></table></div></div>' }
+  };
+  if (!conservarClave) REG_TAB = 'SEG';
+  pintarReglas();
+}
+var REG_TAB = 'SEG', reglasVista = {};
+function pintarReglas() {
+  var orden = ['SEG', 'RPM', 'MOT', 'PRO', 'ECM'];
+  $('app').innerHTML = '<div class="filtros" id="reglasTabs" style="margin-bottom:14px">' + orden.map(function (k) { return '<button data-act="rTab" data-t="' + k + '" class="' + (REG_TAB === k ? 'act' : '') + '">' + reglasVista[k].t + ' (' + reglasVista[k].n + ')</button>'; }).join('') + '</div>' + reglasVista[REG_TAB].h;
 }
 function seccionRangosRpm() {
   var pg = {}; try { pg = JSON.parse(window.__cfgRpm || '{}') || {}; } catch (e) {}
@@ -1247,6 +1264,7 @@ var ACT = {
   borrarBase: async function (d) { var b = cache.basesAdm[Number(d.i)]; if (!confirm('¿Eliminar la base «' + b.nombre + '»?')) return; var r = await ejecutar(function () { return api('admin_base_eliminar', { id: b.id }, adminClave); }, 'Eliminada'); if (r) recargarBases(); },
   formRegla: function (d) { formRegla(d.i === undefined ? undefined : Number(d.i)); },
   borrarRegla: async function (d) { var r = cache.reglas.reglas[Number(d.i)]; if (!confirm('¿Quitar la regla «' + r.nombre + '»?')) return; var o = await ejecutar(function () { return api('regla_eliminar', { id_regla: r.id_regla }, adminClave); }, 'Regla quitada'); if (o) vistaReglas(true); },
+  rTab: function (d) { REG_TAB = d.t; pintarReglas(); },
   formRangoRpm: function (d) { formRangoRpm(d.i === undefined ? undefined : Number(d.i)); },
   borrarRangoRpm: async function (d) {
     var pg = {}; try { pg = JSON.parse(window.__cfgRpm || '{}') || {}; } catch (e) {}
