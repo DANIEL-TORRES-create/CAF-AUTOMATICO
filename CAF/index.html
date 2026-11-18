@@ -265,7 +265,7 @@ async function api(accion, datos, clave) {
 /* ---------- indicador de carga: toda acción muestra una rueda en lo que se pulsó ---------- */
 var TEXTO_CARGA = { u_gua: 'Guardando…', c_ok: 'Guardando…', b_ok: 'Guardando…', r_ok: 'Guardando…', p_ok: 'Guardando…', k_ok: 'Guardando…', e_ok: 'Creando…', o_ok: 'Aceptando…', u_act: 'Consultando MyGeotab…', u_apl: 'Aplicando…',
   generar: 'Generando vista previa…', enviar: 'Enviando…', reprocesar: 'Programando…', corregir: 'Guardando…', obs: 'Guardando…', guardarDiag: 'Guardando…', actualizar: 'Actualizando…', restaurar: 'Quitando…',
-  emiAccion: 'Procesando…', emiTodo: 'Programando…', envioSi: 'Confirmando…', envioNo: 'Confirmando…', crearAviso: 'Creando…', borrarBase: 'Eliminando…', borrarRegla: 'Quitando…', borrarPerfil: 'Quitando…',
+  emiAccion: 'Procesando…', emiTodo: 'Programando…', manGenerar: 'Enviando a la cola…', manDescargar: 'Descargando…', manDescartar: 'Descartando…', manPdf: 'Generando PDF…', envioSi: 'Confirmando…', envioNo: 'Confirmando…', crearAviso: 'Creando…', borrarBase: 'Eliminando…', borrarRegla: 'Quitando…', borrarPerfil: 'Quitando…',
   m_pgu: 'Guardando…', m_rev: 'Consultando MyGeotab…', generarConLoQueHay: 'Aplicando…', quitarIgnorar: 'Quitando…', alterna: 'Programando…', kmgps: 'Programando…', k_est: 'Actualizando…', nuevoCliente: 'Abriendo…', editarCliente: 'Cargando…', unidades: 'Cargando…', emiManual: 'Cargando…', formBase: 'Abriendo…' };
 var tareaActual = null;
 function rueda(grande) { return '<span class="rueda' + (grande ? ' grande' : '') + '"></span>'; }
@@ -351,7 +351,7 @@ async function claveVerificada(titulo) {
 }
 
 /* ---------- navegación ---------- */
-var SECCIONES = [['clientes', 'Clientes', 'users'], ['emisiones', 'Emisiones', 'file'], ['credenciales', 'Credenciales', 'key'], ['reglas', 'Reglas', 'rule'], ['config', 'Configuración', 'cog'], ['guia', 'Guía', 'book']];
+var SECCIONES = [['clientes', 'Clientes', 'users'], ['emisiones', 'Emisiones', 'file'], ['credenciales', 'Credenciales', 'key'], ['reglas', 'Reglas', 'rule'], ['manual', 'Manual', 'cal'], ['config', 'Configuración', 'cog'], ['guia', 'Guía', 'book']];
 var seccion = 'clientes', temporizador = null, adminClave = null, avisosCache = [];
 var cache = {};
 function pintarNav() {
@@ -372,8 +372,8 @@ function ir(s) {
   $('lado').classList.remove('abierto'); $('q').value = ''; filtro.q = '';
   $('titulo').textContent = SECCIONES.filter(function (x) { return x[0] === s; })[0][1];
   $('buscador').style.display = (s === 'clientes' || s === 'emisiones') ? 'flex' : 'none';
-  if ((s === 'clientes' || s === 'emisiones' || s === 'credenciales' || s === 'reglas' || s === 'config') && (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0)) { s = 'guia'; seccion = 'guia'; pintarNav(); $('titulo').textContent = 'Guía'; $('buscador').style.display = 'none'; }
-  return ({ clientes: vistaClientes, emisiones: vistaEmisiones, credenciales: vistaCredenciales, reglas: vistaReglas, config: vistaConfig, guia: vistaGuia })[s]();
+  if ((s === 'clientes' || s === 'emisiones' || s === 'credenciales' || s === 'reglas' || s === 'manual' || s === 'config') && (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0)) { s = 'guia'; seccion = 'guia'; pintarNav(); $('titulo').textContent = 'Guía'; $('buscador').style.display = 'none'; }
+  return ({ clientes: vistaClientes, emisiones: vistaEmisiones, credenciales: vistaCredenciales, reglas: vistaReglas, manual: vistaManual, config: vistaConfig, guia: vistaGuia })[s]();
 }
 
 /* ---------- avisos (campana) ---------- */
@@ -878,7 +878,8 @@ async function detalleEmision(id) {
 }
 function htmlDetalle(d) {
   var e = d.emision;
-  var cab = '<div class="fila sep"><h3 style="margin:0">' + esc(e.cliente) + ' · ' + esc(e.tipo) + ' ' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</h3><span class="chip ' + (CLASE[e.estado] || '') + '">' + esc(e.estado) + '</span></div>';
+  var man = e.tipo === 'MANUAL';
+  var cab = '<div class="fila sep"><h3 style="margin:0">' + esc(e.cliente) + ' · ' + (man ? 'Manual' : esc(e.tipo)) + ' ' + esc(e.periodo_desde) + ' → ' + esc(e.periodo_hasta) + '</h3><span class="chip ' + (CLASE[e.estado] || '') + '">' + esc(e.estado) + '</span></div>';
   if (e.estado === 'ENVIADO') {
     return cab + '<div style="text-align:center;padding:24px 10px">' + checkHtml(true) + '<h3 style="margin:14px 0 4px">Informe enviado</h3><div class="peq">' + esc(fechaLima(e.fecha_envio)) + ' (hora de Lima)' + ' · ' + esc(e.destinatarios) + '</div>' + (e.detalle && /confirmado/.test(e.detalle) ? '<div class="peq">' + esc(e.detalle) + '</div>' : '') + '</div>' +
       '<div class="pie-modal">' + (e.pdf_url ? '<a class="btn" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') + '<button class="btn sec" data-act="cerrar">Cerrar</button></div>';
@@ -888,10 +889,10 @@ function htmlDetalle(d) {
   var sinConf = enviando && Number(e.bloqueo_hasta) < Date.now();
   var p1 = d.completa ? 'hecho' : (proceso ? 'act' : (e.estado === 'RETENIDO' ? 'mal' : ''));
   var p2 = d.completa && d.valida ? 'hecho' : (d.completa ? 'mal' : '');
-  var p3 = e.pdf_url ? 'hecho' : (d.completa && d.valida ? 'act' : '');
+  var p3 = (e.pdf_url || (man && e.pdf_id)) ? 'hecho' : (d.completa && d.valida ? 'act' : '');
   var p4 = sinConf ? 'mal' : (enviando ? 'act' : '');
   var paso = function (c, k, txt) { return '<div class="paso ' + c + ' {A' + k + '}"><div class="b">' + (c === 'hecho' ? ic('ok').replace('class="i"', 'class="i" style="width:16px;height:16px;stroke-width:3"') : (c === 'mal' ? '!' : k)) + '</div>' + txt + '{B' + k + '}</div>'; };
-  var h = cab + '<div class="pasos">' + paso(p1, 1, 'Extracción') + paso(p2, 2, 'Validación') + paso(p3, 3, 'Vista previa') + paso(p4, 4, 'Envío') + '</div>';
+  var h = cab + '<div class="pasos">' + paso(p1, 1, 'Extracción') + paso(p2, 2, 'Validación') + (man ? paso(p3, 3, 'PDF') : paso(p3, 3, 'Vista previa') + paso(p4, 4, 'Envío')) + '</div>';
   h += '<div class="progreso' + (proceso ? ' anim' : '') + '"><div style="width:' + pct + '%"></div></div><div class="peq" style="margin:4px 0 8px">' + t.unidadesCompletas + ' de ' + t.unidades + ' unidades · ' + t.metricasOk + ' de ' + t.metricasTotal + ' métricas (' + pct + '%)</div>';
   if (d.completa && d.valida) h += '<div class="msg ok">✔ Extracción completa: ' + t.unidadesCompletas + ' de ' + t.unidades + ' unidades, ' + t.metricasOk + ' de ' + t.metricasTotal + ' métricas. Validaciones correctas.</div>';
   else if (d.completa) h += '<div class="msg aviso">Extracción completa, pero hay validaciones que corregir antes de enviar.</div>';
@@ -900,7 +901,7 @@ function htmlDetalle(d) {
   if (e.estado === 'LISTO' && e.resultado === 'ERROR_ENVIO') h += '<div class="msg mal"><b>El envío falló:</b> ' + esc(e.detalle) + '</div>';
   if (sinConf) h += '<div class="msg mal"><b>Envío sin confirmar.</b> No se sabe si el correo salió. Revisa «Enviados» de tu Gmail y dinos qué pasó:<div class="fila" style="margin-top:8px"><button class="btn verde chico" data-act="envioSi" data-id="' + esc(e.id) + '">Sí se envió</button><button class="btn rojo chico" data-act="envioNo" data-id="' + esc(e.id) + '">No se envió</button></div></div>';
   else if (enviando) h += '<div class="msg info">Enviando…</div>';
-  if (e.estado === 'LISTO' && e.resultado !== 'ERROR_ENVIO') h += '<div class="msg aviso">Lista. Genera la vista previa, revísala y pulsa «Enviar al cliente».</div>';
+  if (e.estado === 'LISTO' && e.resultado !== 'ERROR_ENVIO') h += man ? '<div class="msg ok">' + (e.pdf_id ? 'Listo: el PDF ya se puede descargar.' : 'Datos listos. Genera el PDF para descargarlo.') + '</div>' : '<div class="msg aviso">Lista. Genera la vista previa, revísala y pulsa «Enviar al cliente».</div>';
   var vistos = {}, puedeIgn = d.v2 && (e.estado === 'RETENIDO' || e.estado === 'LISTO') && !enviando;
   if (d.problemas.length) h += '<div class="msg mal"><b>Problemas (' + d.problemas.length + '):</b>' + d.problemas.map(function (p) { var primera = !vistos[p.placa]; vistos[p.placa] = 1; return '<div class="prob"><span>• <b>' + esc(p.placa) + ':</b> ' + esc(p.detalle) + '</span><span class="fila" style="gap:8px">' + (puedeIgn && primera ? '<label class="peq" style="display:flex;gap:4px;align-items:center;margin:0;cursor:pointer"><input type="checkbox" class="chk-ign" data-p="' + esc(p.placa) + '"> Ignorar (sin operación)</label>' : '') + '<button class="btn chico sec" data-act="datosUnidad" data-id="' + esc(e.id) + '" data-p="' + esc(p.placa) + '">Corregir datos</button></span></div>'; }).join('') +
     (puedeIgn ? '<div class="fila" style="margin-top:8px"><button class="btn ambar" data-act="generarConLoQueHay" data-id="' + esc(e.id) + '">Generar con lo que hay</button><span class="peq">Las unidades marcadas «Ignorar» salen en el PDF con guiones en todas sus mediciones y no cuentan en totales ni notas. Solo afecta a esta emisión.</span></div>' : '') + '</div>';
@@ -915,6 +916,8 @@ function htmlDetalle(d) {
   else if (corriendo) { sig = ''; sigTxt = 'Extracción en curso: espera, esta ventana se actualiza sola.'; }
   else if (!d.completa) { sig = '1'; sigTxt = 'Faltan datos por traer. Reintenta la extracción: retoma lo que falta sin perder lo ya traído.'; }
   else if (!d.valida) { sig = '2'; sigTxt = 'Hay datos por corregir. Pulsa «Corregir datos» en la unidad señalada y luego valida de nuevo.'; }
+  else if (man && !e.pdf_id) { sig = '3'; sigTxt = 'Los datos están correctos. Genera el PDF para descargarlo.'; }
+  else if (man) { sig = '4'; sigTxt = 'El PDF está listo. Descárgalo: después se borra solo del sistema.'; }
   else if (!e.pdf_url) { sig = '3'; sigTxt = 'Los datos están correctos. Genera la vista previa del PDF para revisarla.'; }
   else if (e.estado === 'LISTO') { sig = '4'; sigTxt = 'Revisa el PDF y, si está bien, envíalo al cliente.'; }
   // Un solo botón principal (el siguiente paso real). El resto de acciones queda en «Más opciones».
@@ -923,16 +926,18 @@ function htmlDetalle(d) {
     '1': function (c, g) { return '<button class="btn ' + c + off + (g ? ' grande' : '') + '" data-act="emiAccion" data-a="emision_reintentar" data-todo="0" data-run="' + run + '" data-id="' + esc(e.id) + '" data-m="Reintento programado: solo lo pendiente o fallido">Reintentar extracción</button>'; },
     '1b': function (c, g) { return '<button class="btn ' + c + off + '" data-act="emiTodo" data-run="' + run + '" data-id="' + esc(e.id) + '">Traer todo de nuevo</button>'; },
     '2': function (c, g) { return '<button class="btn ' + c + off + (g ? ' grande' : '') + '" data-act="emiAccion" data-a="emision_validar" data-id="' + esc(e.id) + '" data-m="Validado de nuevo">Validar de nuevo</button>'; },
-    '3': function (c, g) { return '<button class="btn ' + c + (!d.completa || bloq ? ' off' : '') + (g ? ' grande' : '') + '" data-act="generar" data-id="' + esc(e.id) + '">Generar vista previa</button>'; },
-    '4': function (c, g) { return '<button class="btn ' + c + (e.estado !== 'LISTO' ? ' off' : '') + (g ? ' grande' : '') + '" data-act="enviar" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' Enviar al cliente</button>'; }
+    '3': function (c, g) { return '<button class="btn ' + c + (!d.completa || bloq ? ' off' : '') + (g ? ' grande' : '') + '" data-act="' + (man ? 'manPdf' : 'generar') + '" data-id="' + esc(e.id) + '">' + (man ? 'Generar PDF' : 'Generar vista previa') + '</button>'; },
+    '4': function (c, g) { return man ? '<button class="btn ' + c + (e.estado !== 'LISTO' || !e.pdf_id ? ' off' : '') + (g ? ' grande' : '') + '" data-act="manDescargar" data-id="' + esc(e.id) + '" data-cerrar="1">Descargar PDF</button>' : '<button class="btn ' + c + (e.estado !== 'LISTO' ? ' off' : '') + (g ? ' grande' : '') + '" data-act="enviar" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">' + ic('send') + ' Enviar al cliente</button>'; }
   };
   var estadoTxt = e.estado === 'RETENIDO' ? 'RETENIDO: no se envió nada al cliente.' : (e.estado === 'LISTO' ? 'LISTO para enviar.' : esc(e.estado) + '.');
   h += '<div class="siguiente ' + (sig === '4' ? 'ok' : (sig ? '' : 'espera')) + '"><div class="t">Siguiente paso</div><div class="x">' + (sigTxt ? esc(sigTxt) : estadoTxt) + '</div>' +
-    (sig ? acc[sig]((sig === '4' ? 'verde' : 'ambar'), true) : '') + (e.pdf_url ? ' <a class="btn sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') + '</div>';
+    (sig ? acc[sig]((sig === '4' ? 'verde' : 'ambar'), true) : '') + (e.pdf_url && !man ? ' <a class="btn sec" target="_blank" rel="noopener" href="' + esc(e.pdf_url) + '">Abrir PDF</a>' : '') + '</div>';
   var otras = ['1', '1b', '2', '3'].filter(function (k) { return k !== sig; }).map(function (k) { return acc[k]('sec'); }).join('');
-  if (sig !== '4' && e.estado === 'LISTO' && e.pdf_url) otras += acc['4']('sec');
+  if (sig !== '4' && e.estado === 'LISTO' && (man ? e.pdf_id : e.pdf_url)) otras += acc['4']('sec');
+  if (man) otras = ['1', '1b', '2'].filter(function (k) { return k !== sig; }).map(function (k) { return acc[k]('sec'); }).join('') + (sig !== '3' && e.estado === 'LISTO' ? acc['3']('sec') : '') + (sig !== '4' && e.estado === 'LISTO' && e.pdf_id ? acc['4']('sec') : '');
   h += '<details class="mas"><summary>Más opciones</summary><div class="fila">' + otras + '</div>' +
-    '<div class="fila" style="margin-top:8px"><button class="btn sec' + off + '" data-act="reprocesar" data-run="' + run + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div></details>';
+    (man ? '<div class="fila" style="margin-top:8px"><button class="btn rojo chico" data-act="manDescartar" data-id="' + esc(e.id) + '" data-cerrar="1">Descartar este informe</button><span class="peq">Lo borra del sistema sin descargarlo.</span></div></details>' :
+    '<div class="fila" style="margin-top:8px"><button class="btn sec' + off + '" data-act="reprocesar" data-run="' + run + '" data-id="' + esc(e.id) + '" data-n="' + esc(e.cliente) + '">Reprocesar todo y enviar si queda correcto</button><span class="peq">Vuelve a consultar MyGeotab, valida y, solo si todo queda verde, envía el PDF.</span></div></details>');
   h += '<h3 style="margin-top:14px">Unidades</h3><div class="tabla-wrap" style="max-height:44vh"><table><thead><tr><th>Placa</th><th>Dist. km</th><th>Consumo</th><th>H. motor</th><th>Rend.</th><th>Vel. máx.</th><th>Nota</th><th>Estado</th><th></th></tr></thead><tbody>' +
     d.unidades.map(function (u) {
       var nf = (u.errores || []).length;
@@ -1008,7 +1013,83 @@ function datosUnidad(id, placa) {
     '<div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button><button class="btn" data-act="obs" data-id="' + esc(id) + '" data-p="' + esc(placa) + '">Guardar observación</button></div>';
   abrirModal(h);
 }
-async function repintarDetalle() { if (detalleEmision.repintar) await detalleEmision.repintar(); cargarEmisiones(true); refrescarAvisos(); }
+async function repintarDetalle() { if (detalleEmision.repintar) await detalleEmision.repintar(); cargarEmisiones(true); if ($('listaMan')) cargarManual(true); refrescarAvisos(); }
+
+/* =============================== MANUAL (fechas específicas, sin envío) =============================== */
+var manPlacas = {};   // placa -> marcada (cuando no se eligen «todas»)
+function ayerLima() { return new Date(Date.now() - 5 * 3600000 - 86400000).toISOString().slice(0, 10); }
+function diasEntre(a, b) { return Math.round((Date.parse(b + 'T00:00:00Z') - Date.parse(a + 'T00:00:00Z')) / 86400000) + 1; }
+function fechaCorta(iso) { var p = String(iso).split('-'); return p.length === 3 ? p[2] + '/' + p[1] + '/' + p[0] : iso; }
+function bajarBase64(nombre, b64) {
+  var bin = atob(b64), u8 = new Uint8Array(bin.length);
+  for (var i = 0; i < bin.length; i++) u8[i] = bin.charCodeAt(i);
+  var url = URL.createObjectURL(new Blob([u8], { type: 'application/pdf' }));
+  var a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+}
+async function vistaManual() {
+  manPlacas = {};
+  $('app').innerHTML = pantallaCarga('Cargando…');
+  var cls; try { cls = (await api('clientes_listar')).filter(function (c) { return c.estado === 'ACTIVO'; }); } catch (e) { $('app').innerHTML = '<div class="msg mal">' + esc(e.message) + '</div>'; return; }
+  var ayer = ayerLima();
+  $('app').innerHTML = '<div class="tarjeta"><h3 style="margin-top:0">Informe manual</h3>' +
+    '<p class="peq">Saca el PDF de unas fechas específicas (máximo 31 días) con lo que ya está configurado. No se envía por correo y no se guarda: lo descargas y el sistema lo borra.</p>' +
+    '<div class="cols"><div><label>Cliente</label><select id="man_cli"><option value="">Elige un cliente…</option>' + cls.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.nombre_titulo) + '</option>'; }).join('') + '</select></div>' +
+    '<div><label>Desde</label><input type="date" id="man_d" max="' + ayer + '"></div><div><label>Hasta</label><input type="date" id="man_h" max="' + ayer + '"></div></div>' +
+    '<div class="peq" id="man_info" style="margin:6px 0"></div>' +
+    '<label class="fila" style="gap:8px;margin:8px 0;cursor:pointer"><input type="checkbox" id="man_todas" checked style="width:auto"> Todas las placas del cliente</label>' +
+    '<div id="man_pl" style="display:none"></div>' +
+    '<div class="fila" style="margin-top:10px"><button class="btn" id="man_ok" data-act="manGenerar">Generar</button><span class="peq">Puedes seguir pidiendo otros: quedan en cola y se procesan de uno en uno.</span></div></div>' +
+    '<h3 style="margin:18px 0 8px">En cola y listos</h3><div id="listaMan">' + pantallaCarga('Cargando…') + '</div>';
+  var info = function () {
+    var d = $('man_d').value, h = $('man_h').value, t = '', mal = false;
+    if (d && h) {
+      if (d > h) { t = 'La fecha de inicio no puede ser posterior a la de fin.'; mal = true; }
+      else { var n = diasEntre(d, h); t = n + (n === 1 ? ' día' : ' días'); if (n > 31) { t += ': el máximo es 31 días.'; mal = true; } }
+    }
+    $('man_info').textContent = t; $('man_info').style.color = mal ? 'var(--mal)' : '';
+    return !mal;
+  };
+  $('man_d').onchange = $('man_h').onchange = info;
+  $('man_todas').onchange = function () { $('man_pl').style.display = this.checked ? 'none' : 'block'; };
+  $('man_cli').onchange = async function () {
+    manPlacas = {}; $('man_pl').innerHTML = ''; $('man_todas').checked = true; $('man_pl').style.display = 'none';
+    if (!this.value) return;
+    var lista = await ejecutar(function () { return api('manual_placas', { cliente_id: $('man_cli').value }); });
+    if (!lista) return;
+    $('man_pl').innerHTML = lista.length ? '<div class="fila" style="flex-wrap:wrap;gap:6px 14px">' + lista.map(function (u) { return '<label class="fila" style="gap:6px;cursor:pointer"><input type="checkbox" class="man_p" data-p="' + esc(u.placa) + '" style="width:auto"> ' + esc(u.placa) + '</label>'; }).join('') + '</div>' : '<div class="peq">Este cliente no tiene unidades activas.</div>';
+  };
+  await cargarManual();
+  temporizador = setInterval(function () { if (!pila.length && !tareaActual) cargarManual(true); }, 5000);
+}
+async function cargarManual(silencioso) {
+  try {
+    var l = await api('manual_listar');
+    if (!$('listaMan')) return;
+    var pct = {};
+    for (var i = 0; i < l.length; i++) {
+      if (l[i].estado === 'EN_COLA' || l[i].estado === 'EXTRAYENDO') {
+        try { var pr = (await api('emision_get', { id: l[i].id })).progreso; pct[l[i].id] = pr && pr.metricasTotal ? Math.round(100 * pr.metricasOk / pr.metricasTotal) : 0; } catch (x) { pct[l[i].id] = 0; }
+      }
+    }
+    if (!$('listaMan')) return;
+    var firma = JSON.stringify([l, pct]);
+    if ($('listaMan').dataset.f === firma) return;
+    $('listaMan').dataset.f = firma;
+    $('listaMan').innerHTML = l.length ? '<div class="tabla-wrap"><table><thead><tr><th>Cliente</th><th>Fechas</th><th>Estado</th><th></th></tr></thead><tbody>' + l.map(function (e) {
+      var chip, activo = e.estado === 'EN_COLA' || e.estado === 'EXTRAYENDO';
+      if (e.estado === 'EN_COLA') chip = '<span class="chip azul pulso">En cola</span>';
+      else if (e.estado === 'EXTRAYENDO') chip = '<span class="chip azul pulso">Extrayendo ' + (pct[e.id] || 0) + '%</span>';
+      else if (e.estado === 'RETENIDO') chip = '<span class="chip mal">Revisar datos</span>';
+      else chip = e.pdf_listo ? '<span class="chip ok">PDF listo</span>' : '<span class="chip aviso pulso">Generando PDF…</span>';
+      var horas = Math.ceil(e.borra_en_min / 60);
+      return '<tr><td><b>' + esc(e.cliente) + '</b></td><td>' + esc(fechaCorta(e.periodo_desde)) + ' → ' + esc(fechaCorta(e.periodo_hasta)) + '</td><td>' + chip + (e.estado === 'RETENIDO' ? '<div class="peq">' + esc(String(e.detalle || '').split('\n')[0]) + '</div>' : '') + '<div class="peq">Se borra solo en ' + (horas <= 1 ? 'menos de 1 hora' : horas + ' horas') + '</div></td>' +
+        '<td style="white-space:nowrap">' + (e.pdf_listo ? '<button class="btn chico verde" data-act="manDescargar" data-id="' + esc(e.id) + '">Descargar PDF</button> ' : '') +
+        '<button class="btn chico sec" data-act="verEmision" data-id="' + esc(e.id) + '">' + (e.estado === 'RETENIDO' ? 'Revisar' : 'Ver') + '</button> ' +
+        '<button class="btn chico sec" data-act="manDescartar" data-id="' + esc(e.id) + '"' + (e.estado === 'EXTRAYENDO' ? ' title="Se puede descartar cuando termine de extraer"' : '') + '>Descartar</button></td></tr>';
+    }).join('') + '</tbody></table></div>' : '<div class="tarjeta vacio">No hay informes manuales en curso.</div>';
+  } catch (e) { if (!silencioso) alerta(e.message); }
+}
 
 /* =============================== CREDENCIALES =============================== */
 async function vistaCredenciales() {
@@ -1217,6 +1298,7 @@ var G_USO = [
 var G_FALLA = [
   ['Criterios de medición en el PDF', '<p>En Reglas › Biblioteca de reglas, cada regla tiene un campo opcional «Texto para el PDF» (por ejemplo >0.35 G, >0.4 G; >10 kph, >-0.4 G o 700 – 1100 RPM). Los encabezados de las tablas llevan solo el nombre (Exceso de velocidad, Giro brusco, Aceleración brusca, Frenada brusca) y los valores salen en el recuadro «Criterios de medición», debajo de la Nomenclatura en la hoja de eventos. Seguridad siempre se muestra (sin texto en la regla, con el valor de siempre). RPM se muestra solo si las unidades tienen reglas con texto o rangos propios, agrupado por modelo de motor (perfil) o por nombre de rango propio, nunca por placa. Si en un mismo cliente hay unidades con criterios de seguridad distintos, se muestra el de la mayoría y el otro con sus placas. Si el recuadro no cabe en la hoja de eventos, va en una hoja propia. Rige desde la próxima emisión; las emisiones en curso no cambian.</p>'],
   ['Rangos de RPM propios con nombre', '<p>Cada rango propio de RPM lleva un nombre. Puedes crearlo en Reglas › «Perfiles de rangos RPM propios» o directamente en Unidades › Avanzado › RPM › Rangos propios (al aceptar queda guardado con su nombre). En la tabla de Unidades, bajo el perfil de motor, se ve el nombre del rango que usa cada unidad. En Reglas ves cuántas unidades usan cada uno y puedes editarlo o quitarlo; cada unidad conserva su propia copia, así que editar o quitar un rango no cambia las unidades que ya lo usan.</p>'],
+  ['Informe de fechas específicas (Manual)', '<p>En el menú <b>Manual</b>: elige el cliente, las fechas de inicio y fin (máximo 31 días) y las placas (todas o solo algunas) y pulsa «Generar». Se extrae con lo que ya está configurado, sin cambiar nada. Puedes pedir otros mientras trabaja: quedan en cola y se procesan de uno en uno, siempre detrás de los envíos automáticos. Al terminar aparece «Descargar PDF» (igual al que recibe el cliente, con las fechas en el título). Al descargarlo, el sistema borra el archivo y los datos; si no lo descargas, se borra solo a las 24 horas. No se envía por correo. Si una unidad falla la validación, pulsa «Revisar»: son las mismas opciones de siempre (corregir el dato, ignorar la unidad o generar con lo que hay).</p>'],
   ['Unidad sin operación en el periodo (Ignorar)', '<p>Si una unidad no se movió en el periodo y por eso el sistema retiene la emisión, en el cuadro de Problemas marca «Ignorar (sin operación)» junto a esa unidad y pulsa «Generar con lo que hay». La unidad sigue en el PDF pero con guiones en todas sus mediciones, notas y tablas, y no cuenta en totales ni rankings. Es manual y solo afecta a esa emisión (se puede quitar con «Quitar ignorar»). Si el problema es una falla de datos y no falta de operación, no la ignores: usa variable alterna o kilometraje GPS. Para dejar de incluirla en los siguientes informes, ponla Inactiva en Unidades.</p>'],
   ['Quedó RETENIDO (dato dudoso o faltante)', 'Abre la emisión y lee los problemas. Corrige el dato a mano o usa «Traer todo de nuevo». Luego «Validar de nuevo» → «Generar vista previa» → «Enviar al cliente».'],
   ['La extracción se detuvo o no avanza', 'Pulsa «Reintentar extracción»: retoma lo que falta sin perder lo ya traído. Si MyGeotab estuvo caído, vuelve a intentarlo cuando regrese.'],
@@ -1280,6 +1362,40 @@ var ACT = {
   reprocesar: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; if (!confirm('Se volverá a consultar MyGeotab, se validará y, si todo queda correcto, se enviará el PDF a ' + d.n + '. Si algo falla queda RETENIDO sin enviar. ¿Continuar?')) return; await ejecutar(function () { return api('emision_reintentar', { id: d.id, todo: true, auto: true }); }, 'Reproceso programado: se enviará solo si queda correcto'); repintarDetalle(); },
   emiAccion: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; await ejecutar(function () { return api(d.a, { id: d.id, todo: d.todo === '1' }); }, d.m); repintarDetalle(); },
   emiTodo: async function (d) { if (d.run === '1' && !confirm('Hay una extracción corriendo ahora mismo. ¿Forzar de todos modos?')) return; if (!confirm('¿Traer todo de nuevo? Se descartan los datos extraídos (no las correcciones manuales).')) return; await ejecutar(function () { return api('emision_reintentar', { id: d.id, todo: true }); }, 'Se traerá todo de nuevo'); repintarDetalle(); },
+  manGenerar: async function () {
+    var cli = $('man_cli').value, d = $('man_d').value, h = $('man_h').value;
+    if (!cli) { alerta('Elige el cliente.'); return; }
+    if (!d || !h) { alerta('Pon la fecha de inicio y la de fin.'); return; }
+    if (d > h) { alerta('La fecha de inicio no puede ser posterior a la de fin.'); return; }
+    if (diasEntre(d, h) > 31) { alerta('El máximo es 31 días por informe.'); return; }
+    var placas = [];
+    if (!$('man_todas').checked) {
+      placas = Array.prototype.map.call(document.querySelectorAll('.man_p:checked'), function (x) { return x.dataset.p; });
+      if (!placas.length) { alerta('Marca al menos una placa o elige «Todas las placas».'); return; }
+    }
+    var r = await ejecutar(function () { return api('manual_crear', { cliente_id: cli, desde: d, hasta: h, placas: placas }); });
+    if (!r) return;
+    toast('En cola: ' + r.unidades + (r.unidades === 1 ? ' unidad' : ' unidades') + '. Puedes pedir otro.', 'ok');
+    $('man_todas').checked = true; $('man_pl').style.display = 'none'; Array.prototype.forEach.call(document.querySelectorAll('.man_p'), function (x) { x.checked = false; });
+    $('listaMan').dataset.f = ''; cargarManual(true);
+  },
+  manDescargar: async function (d) {
+    var r = await ejecutar(function () { return api('manual_descargar', { id: d.id }); });
+    if (!r) return;
+    try { bajarBase64(r.nombre, r.base64); } catch (e) { alerta('No se pudo guardar el PDF (' + e.message + '). El informe sigue disponible: inténtalo de nuevo.'); return; }
+    var l = await ejecutar(function () { return api('manual_eliminar', { id: d.id }); });
+    toast(l ? 'PDF descargado ✔ y limpiado del sistema' : 'PDF descargado ✔ (se borrará solo en 24 horas)', 'ok');
+    if (d.cerrar === '1') cerrarModal();
+    if ($('listaMan')) { $('listaMan').dataset.f = ''; cargarManual(true); }
+  },
+  manDescartar: async function (d) {
+    if (!confirm('¿Descartar este informe? Se borra del sistema sin descargarlo.')) return;
+    var r = await ejecutar(function () { return api('manual_eliminar', { id: d.id }); }, 'Informe descartado');
+    if (!r) return;
+    if (d.cerrar === '1') cerrarModal();
+    if ($('listaMan')) { $('listaMan').dataset.f = ''; cargarManual(true); }
+  },
+  manPdf: async function (d) { toast('Generando el PDF, puede tardar un minuto…'); var r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); if (r) { toast('PDF listo para descargar', 'ok'); repintarDetalle(); } },
   generar: async function (d) { toast('Generando la vista previa, puede tardar un minuto…'); var r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); if (r) { toast('Vista previa lista', 'ok'); window.open(r.url, '_blank', 'noopener'); repintarDetalle(); } },
   enviar: async function (d) { if (!confirm('¿Enviar el informe a ' + d.n + '? Esta acción no se puede repetir.')) return; var r = await ejecutar(function () { return api('emision_enviar', { id: d.id }); }); repintarDetalle(); if (r) toast('Informe enviado ✔', 'ok'); },
   envioSi: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: true }); }, 'Confirmado: queda como ENVIADO'); if (r) { repintarDetalle(); } },
@@ -1295,7 +1411,9 @@ var ACT = {
       await repintarDetalle();
     } finally { fin(); }
     if (!ult) return;
-    if (ult.estado === 'LISTO') {
+    if (ult.estado === 'LISTO' && window.__det && window.__det.emision.tipo === 'MANUAL') {
+      toast('Listo: el PDF ya se puede descargar', 'ok'); repintarDetalle();
+    } else if (ult.estado === 'LISTO') {
       var fin2 = cargandoModal('Generando la vista previa del PDF… puede tardar un minuto');
       var r; try { r = await ejecutar(function () { return api('emision_generar', { id: d.id }); }); } finally { fin2(); }
       if (r) { toast('Vista previa lista', 'ok'); window.open(r.url, '_blank', 'noopener'); repintarDetalle(); }
