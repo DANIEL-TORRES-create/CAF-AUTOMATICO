@@ -525,7 +525,7 @@ function pintarUnidades(nuevo) {
     '<p class="peq">Las unidades nuevas entran como PENDIENTE y no se usan hasta activarlas con su energía (diésel, gas o eléctrico) y, si tienen motor, su perfil. Una unidad INACTIVA deja de traer datos desde la próxima ejecución.</p>' +
     (function () { var act = (cnt.ACTIVO || 0) + (cnt.PENDIENTE || 0), lim = uCtx.limite || 20; return '<div class="msg ' + (act > lim ? 'mal' : 'info') + '" style="margin:0 0 10px">Unidades activas (activas + pendientes): <b>' + act + ' de ' + lim + '</b>.' + (act > lim ? ' Supera el máximo por informe: inactiva las que no se vayan a informar hasta quedar en ' + lim + ' o menos, o trabaja este cliente con Power BI. No se podrá guardar mientras supere el máximo.' : ' Las inactivas no cuentan.') + '</div>'; })() +
     '<div class="fila sep" style="margin-bottom:10px"><div class="filtros">' + [['TODAS', 'Todas'], ['ACTIVO', 'Activas'], ['PENDIENTE', 'Pendientes'], ['INACTIVO', 'Inactivas']].map(function (f) { return '<button data-act="uFiltro" data-f="' + f[0] + '" class="' + (uCtx.filtro === f[0] ? 'act' : '') + '">' + f[1] + ' (' + (cnt[f[0]] || 0) + ')</button>'; }).join('') + '</div><input id="u_txt" placeholder="Buscar placa…" value="' + esc(uCtx.texto) + '" style="width:180px"></div>' +
-    '<div class="fila" style="margin-bottom:10px;padding:10px;background:var(--panel2);border-radius:10px"><b class="peq">Aplicar a las marcadas:</b><select id="u_perfil"><option value="">Perfil…</option>' + uCtx.perfiles.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select><select id="u_comb"><option value="">Energía…</option><option>DIESEL</option><option>GAS</option><option>ELECTRICO</option></select><select id="u_est"><option value="">Estado…</option><option>ACTIVO</option><option>PENDIENTE</option><option>INACTIVO</option></select><button class="btn chico sec" id="u_apl">Aplicar</button></div>' +
+    '<div class="fila" style="margin-bottom:10px;padding:10px;background:var(--panel2);border-radius:10px"><b class="peq">Aplicar a las marcadas:</b><select id="u_perfil"><option value="">Perfil…</option>' + uCtx.perfiles.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select><select id="u_comb"><option value="">Energía…</option><option>DIESEL</option><option>GAS</option><option>ELECTRICO</option></select><select id="u_rm"><option value="">RPM…</option><option value="REGLA">Por regla</option><option value="MANUAL">Manual</option><option value="SIN">Sin RPM</option></select><select id="u_rl" style="display:none"></select><select id="u_est"><option value="">Estado…</option><option>ACTIVO</option><option>PENDIENTE</option><option>INACTIVO</option></select><button class="btn chico sec" id="u_apl">Aplicar</button></div>' +
     '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th><input type="checkbox" id="u_todos"></th><th>Placa (la que se imprime)</th><th>MyGeotab</th><th>Perfil</th><th>Energía</th><th>Estado</th><th>Rend. máx</th><th>Rend. mín</th><th></th></tr></thead><tbody>' +
     u.map(function (x, i) {
       if (uCtx.filtro !== 'TODAS' && x.estado !== uCtx.filtro) return '';
@@ -533,7 +533,7 @@ function pintarUnidades(nuevo) {
       var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids || x.origen || x.consumo_fuente || x.rpm_modo;
       return '<tr data-i="' + i + '"><td><input type="checkbox" class="u_sel"></td><td><input class="f_placa" size="9" value="' + esc(x.placa) + '"></td><td class="peq">' + esc(x.nombre_geotab) + '</td>' +
         '<td><select class="f_perfil"><option value=""></option>' + uCtx.perfiles.map(function (p) { return '<option' + (p === x.perfil ? ' selected' : '') + '>' + esc(p) + '</option>'; }).join('') + '</select>' + selectorRpmFila(x) + '</td>' +
-        '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option><option' + (x.combustible === 'ELECTRICO' ? ' selected' : '') + '>ELECTRICO</option></select></td>' +
+        '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option><option' + (x.combustible === 'ELECTRICO' ? ' selected' : '') + '>ELECTRICO</option></select>' + etiquetaMedicion(x) + '</td>' +
         '<td><select class="f_est">' + ['ACTIVO', 'PENDIENTE', 'INACTIVO'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></td>' +
         '<td><input class="f_rmax" size="4" value="' + esc(x.rend_max) + '"></td><td><input class="f_rmin" size="4" value="' + esc(x.rend_min) + '"></td>' +
         '<td style="white-space:nowrap"><button class="btn chico ' + (avanzado ? '' : 'sec') + '" style="white-space:nowrap" data-act="uAvanzado" data-i="' + i + '">' + (avanzado ? 'Avanzado ●' : 'Avanzado') + '</button></td></tr>';
@@ -549,11 +549,24 @@ function pintarUnidades(nuevo) {
     uCtx.unidades = r.unidades; toast(r.nuevas + ' nuevas · ' + r.inactivadas + ' inactivadas · ' + r.reactivadas + ' reactivadas', 'ok'); pintarUnidades(false);
     if (r.excede) avisoLimite(r.mensaje);
   });
+  var uRm = m.querySelector('#u_rm'), uRl = m.querySelector('#u_rl');
+  uRm.onchange = function () {   // segunda lista según el modo: perfiles de motor (por regla) o rangos propios guardados (manual)
+    var pgR = rpmGuardadosPantalla(), v = uRm.value;
+    if (v === 'REGLA') { uRl.innerHTML = '<option value="">Perfil de motor…</option>' + uCtx.perfiles.map(function (x) { return '<option>' + esc(x) + '</option>'; }).join(''); uRl.style.display = ''; }
+    else if (v === 'MANUAL') { uRl.innerHTML = '<option value="">Rango propio…</option>' + Object.keys(pgR).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join(''); uRl.style.display = ''; }
+    else { uRl.innerHTML = ''; uRl.style.display = 'none'; }
+  };
   m.querySelector('#u_apl').onclick = function () {
+    var rm = uRm.value, rl = uRl.value;
+    if ((rm === 'REGLA' || rm === 'MANUAL') && !rl) { toast(rm === 'REGLA' ? 'Elige el perfil de motor de la lista.' : 'Elige el rango propio de la lista.'); return; }
     var p = m.querySelector('#u_perfil').value, c = m.querySelector('#u_comb').value, e = m.querySelector('#u_est').value, k = 0;
     m.querySelectorAll('tr[data-i]').forEach(function (tr) {
       if (!tr.querySelector('.u_sel').checked) return; k++;
       if (p) tr.querySelector('.f_perfil').value = p; if (c) tr.querySelector('.f_comb').value = c; if (e) tr.querySelector('.f_est').value = e;
+      var fr = tr.querySelector('.f_rpm');
+      if (rm === 'REGLA') { tr.querySelector('.f_perfil').value = rl; if (fr) fr.value = ''; }          // reglas del perfil elegido
+      else if (rm === 'MANUAL' && fr) fr.value = 'R:' + rl;                                           // rango propio
+      else if (rm === 'SIN' && fr) fr.value = 'SIN';
     });
     toast(k ? 'Aplicado a ' + k + ' unidades. Pulsa «Guardar cambios».' : 'Marca primero las unidades.');
   };
@@ -604,6 +617,13 @@ async function revisarVariablesUnidad(x) {
     '<tr><td><b>Viajes (GPS)</b></td><td><span class="chip ' + (r.viajes.estado === 'CON DATOS' ? 'ok' : (r.viajes.estado === 'ERROR' ? 'mal' : 'aviso')) + '">' + esc(r.viajes.estado) + '</span></td><td>' + (r.viajes.n === undefined ? '—' : n(r.viajes.n)) + '</td><td colspan="4" class="peq">' + (r.viajes.n ? n(r.viajes.km) + ' km · conducción ' + hhmm(r.viajes.conduccion_h) + ' h · ralentí ' + hhmm(r.viajes.ralenti_h) + ' h' : '') + '</td></tr>' +
     '</tbody></table></div><div class="pie-modal"><button class="btn" data-act="cerrar">Cerrar</button></div>', 'ancho');
 }
+/** Resumen mínimo de lo marcado en Avanzado (solo si se salió de lo normal): distancia por GPS y/o consumo alterno / sin consumo. */
+function etiquetaMedicion(x) {
+  var t = [], elec = String(x.combustible).toUpperCase() === 'ELECTRICO';
+  if (x.origen === 'GPS') t.push('Distancia GPS'); else if (x.origen === 'GPSKM') t.push('Km por GPS');
+  if (!elec) { if (x.consumo_fuente === 'ALTERNA') t.push('Consumo alterno'); else if (x.consumo_fuente === 'SIN') t.push('Sin consumo'); }
+  return t.length ? '<div class="peq" style="margin-top:4px;font-size:11px;color:var(--suave)">' + esc(t.join(' · ')) + '</div>' : '';
+}
 function rpmGuardadosPantalla() { try { return JSON.parse(window.__cfgRpm || '{}') || {}; } catch (e) { return {}; } }
 /** Valor del selector RPM de la fila: '' (reglas del perfil), 'SIN', 'R:nombre' (rango guardado) o 'KEEP' (rangos propios sin nombre conocido). */
 function valorRpmFila(x) {
@@ -647,6 +667,7 @@ function unidadAvanzada(i) {
     (elec ? '<div><label>Consumo</label><div class="peq" style="padding:8px 0">Eléctrico: movimiento + ralentí − regenerada (kWh).</div></div>' :
       '<div><label>Consumo de combustible</label>' + sel('m_cons', x.consumo_fuente === 'PRINCIPAL' ? '' : (x.consumo_fuente || ''), [['', 'Principal ECM (lo de siempre)'], ['ALTERNA', 'Variable alterna del dispositivo'], ['SIN', 'Sin consumo (guion, no retiene)']]) + '</div>' +
       '<div><label>RPM</label>' + sel('m_rpm', x.rpm_modo === 'REGLAS' ? '' : (x.rpm_modo || ''), [['', 'Reglas del perfil de motor (lo de siempre)'], ['SIN', 'Sin RPM (guion, no retiene)'], ['RANGOS', 'Rangos propios']]) + '</div>') + '</div>' +
+    '<div id="m_avgps" class="msg info" style="display:none;margin-top:8px">El GPS no entrega consumo. Si la ECM de esta unidad tampoco lo tiene, elige <b>Variable alterna</b> o <b>Sin consumo</b>.</div>' +
     (elec ? '' : '<div id="m_rangos" style="display:' + (x.rpm_modo === 'RANGOS' ? 'block' : 'none') + '"><div class="sec-t" style="margin-top:12px">Rangos propios de RPM</div><p class="peq">Cada rango empieza donde termina el anterior. Solo cuentan lecturas con ignición encendida. «Condición»: en movimiento, detenido o ambos.</p>' +
       '<div class="fila" style="margin:6px 0"><select id="m_perfil"><option value="">Copiar de un perfil guardado…</option>' + Object.keys(rpmGuardados).map(function (k) { return '<option>' + esc(k) + '</option>'; }).join('') + '</select><input id="m_pnom" placeholder="Nombre del rango (obligatorio)" size="30" value="' + esc(nombreRangos) + '"><span class="peq">Todo rango lleva nombre: al aceptar queda guardado para reutilizarlo en otras unidades.</span></div>' +
       '<div class="tabla-wrap"><table><thead><tr><th>Rango</th><th>Desde (RPM)</th><th>Hasta (RPM)</th><th>Condición</th></tr></thead><tbody>' +
@@ -669,8 +690,11 @@ function unidadAvanzada(i) {
   var m = abrirModal(h, 'ancho');
   m.dataset.fijo = '1';
   var leerRangos = function () { var r = {}; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var k = tr.getAttribute('data-b'), de = tr.querySelector('.b_de').value.trim(), a = tr.querySelector('.b_a'); r[k] = { de: de, cond: tr.querySelector('.b_c').value }; if (a) r[k].a = a.value.trim(); }); return r; };
+  var avGps = m.querySelector('#m_avgps'), selOr = m.querySelector('#m_origen'), selCo = m.querySelector('#m_cons');
+  var mostrarAvGps = function () { if (avGps) avGps.style.display = (selOr.value === 'GPS' && selCo && selCo.value === '') ? 'block' : 'none'; };
+  selOr.onchange = mostrarAvGps; mostrarAvGps();
   var rpmSel = m.querySelector('#m_rpm'); if (rpmSel) rpmSel.onchange = function () { m.querySelector('#m_rangos').style.display = this.value === 'RANGOS' ? 'block' : 'none'; };
-  var consSel = m.querySelector('#m_cons'); if (consSel) consSel.onchange = function () { if (this.value === 'ALTERNA') toast('Pulsa «Aceptar» y vuelve a abrir Avanzado para ver las variables alternas.'); };
+  var consSel = m.querySelector('#m_cons'); if (consSel) consSel.onchange = function () { mostrarAvGps(); if (this.value === 'ALTERNA') toast('Pulsa «Aceptar» y vuelve a abrir Avanzado para ver las variables alternas.'); };
   m.querySelector('#m_rev').onclick = conRuedaFn(function () { return revisarVariablesUnidad(x); });
   var perSel = m.querySelector('#m_perfil'); if (perSel) perSel.onchange = function () { var pf = rpmGuardados[this.value]; if (!pf) return; m.querySelectorAll('#m_rangos tr[data-b]').forEach(function (tr) { var b = pf[tr.getAttribute('data-b')] || {}; tr.querySelector('.b_de').value = b.de === undefined ? '' : b.de; var a = tr.querySelector('.b_a'); if (a) a.value = b.a === undefined ? '' : b.a; tr.querySelector('.b_c').value = b.cond || 'AMBOS'; }); var pn = m.querySelector('#m_pnom'); if (pn) pn.value = this.value; };
   m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); var rr2 = m.querySelector('#m_rangos'); if (rr2) rr2.style.display = 'none'; toast('Restablecido. Pulsa «Aceptar».'); };
@@ -1235,7 +1259,11 @@ var ACT = {
   unidades: function (d) { return abrirUnidades(d.id); },
   emiManual: function (d) { return emisionManual(d.id, d.n); },
   uFiltro: function (d) { var m = pila[pila.length - 1]; leerUnidadesPantalla(m); uCtx.filtro = d.f; pintarUnidades(false); },
-  uAvanzado: function (d) { unidadAvanzada(Number(d.i)); },
+  uAvanzado: function (d) {
+    var mm = pila[pila.length - 1];   // lo marcado en la fila (perfil, energía, RPM) pasa a Avanzado aunque aún no se haya guardado
+    if (mm && mm.querySelector('tr[data-i]')) leerUnidadesPantalla(mm);
+    unidadAvanzada(Number(d.i));
+  },
   actualizar: function () { return cargarEmisiones(); },
   fEstado: function (d) { filtro.estado = d.e; return cargarEmisiones(true); },
   verEmision: function (d) { cerrarCajon(); return detalleEmision(d.id); },
