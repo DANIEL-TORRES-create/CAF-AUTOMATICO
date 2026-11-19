@@ -406,6 +406,7 @@ var vistaTarjetas = leerLocal('vista') !== 'tabla', listaClientes = [];
 async function vistaClientes() {
   $('app').innerHTML = '<div class="kpis" id="kpis"></div><div id="curso"></div><div class="fila sep" style="margin-bottom:14px"><div class="fila"><button class="btn ambar" data-act="nuevoCliente">' + ic('plus') + ' Nuevo cliente</button></div><div class="filtros" id="vt"><button data-act="vista" data-v="t" class="' + (vistaTarjetas ? 'act' : '') + '">Tarjetas</button><button data-act="vista" data-v="l" class="' + (vistaTarjetas ? '' : 'act') + '">Lista</button></div></div><div id="lista">' + pantallaCarga('Cargando clientes…') + '</div>';
   await cargarClientes();
+  if (seccion !== 'clientes') return;   // si ya cambiaste de pantalla, no se arma el temporizador de esta
   temporizador = setInterval(function () { if (!pila.length && !enVuelo) { cargarKpis(); } }, 8000);
 }
 async function cargarKpis() {
@@ -434,6 +435,7 @@ async function cargarKpis() {
 async function cargarClientes() {
   cargarKpis();
   var l = await ejecutar(function () { return api('clientes_listar'); });
+  if (seccion !== 'clientes' || !$('lista')) return;   // la respuesta llegó cuando ya estabas en otra pantalla
   if (!l) { $('lista').innerHTML = ''; return; }
   listaClientes = l; pintarClientes();
 }
@@ -524,8 +526,8 @@ async function abrirUnidades(id) {
 }
 function pintarUnidades(nuevo) {
   var u = uCtx.unidades;
-  var cnt = { TODAS: u.length, ACTIVO: 0, PENDIENTE: 0, INACTIVO: 0 };
-  u.forEach(function (x) { cnt[x.estado] = (cnt[x.estado] || 0) + 1; });
+  var cnt = { TODAS: 0, ACTIVO: 0, PENDIENTE: 0, INACTIVO: 0 };
+  u.forEach(function (x) { if (x.estado === 'RETIRADO') return; cnt.TODAS++; cnt[x.estado] = (cnt[x.estado] || 0) + 1; });   // las retiradas no se muestran ni cuentan
   var h = '<div class="fila sep"><h3 style="margin:0">Unidades · ' + esc(uCtx.nombre) + '</h3><button class="btn" id="u_act">Actualizar desde MyGeotab</button></div>' +
     '<p class="peq">Las unidades nuevas entran como PENDIENTE y no se usan hasta activarlas con su energía (diésel, gas o eléctrico) y, si tienen motor, su perfil. Una unidad INACTIVA deja de traer datos desde la próxima ejecución.</p>' +
     (function () { var act = (cnt.ACTIVO || 0) + (cnt.PENDIENTE || 0), lim = uCtx.limite || 20; return '<div class="msg ' + (act > lim ? 'mal' : 'info') + '" style="margin:0 0 10px">Unidades activas (activas + pendientes): <b>' + act + ' de ' + lim + '</b>.' + (act > lim ? ' Supera el máximo por informe: inactiva las que no se vayan a informar hasta quedar en ' + lim + ' o menos, o trabaja este cliente con Power BI. No se podrá guardar mientras supere el máximo.' : ' Las inactivas no cuentan.') + '</div>'; })() +
@@ -533,27 +535,23 @@ function pintarUnidades(nuevo) {
     '<div class="fila" style="margin-bottom:10px;padding:10px;background:var(--panel2);border-radius:10px"><b class="peq">Aplicar a las marcadas:</b><select id="u_perfil"><option value="">Perfil…</option>' + uCtx.perfiles.map(function (p) { return '<option>' + esc(p) + '</option>'; }).join('') + '</select><select id="u_comb"><option value="">Energía…</option><option>DIESEL</option><option>GAS</option><option>ELECTRICO</option></select><select id="u_rm"><option value="">RPM…</option><option value="REGLA">Por regla</option><option value="MANUAL">Manual</option><option value="SIN">Sin RPM</option></select><select id="u_rl" style="display:none"></select><select id="u_est"><option value="">Estado…</option><option>ACTIVO</option><option>PENDIENTE</option><option>INACTIVO</option></select><button class="btn chico sec" id="u_apl">Aplicar</button></div>' +
     '<div class="tabla-wrap" style="max-height:48vh"><table><thead><tr><th><input type="checkbox" id="u_todos"></th><th>Placa (la que se imprime)</th><th>MyGeotab</th><th>Perfil</th><th>Energía</th><th>Estado</th><th>Rend. máx</th><th>Rend. mín</th><th></th></tr></thead><tbody>' +
     u.map(function (x, i) {
+      if (x.estado === 'RETIRADO') return '';
       if (uCtx.filtro !== 'TODAS' && x.estado !== uCtx.filtro) return '';
       if (uCtx.texto && (x.placa + ' ' + x.nombre_geotab).toLowerCase().indexOf(uCtx.texto.toLowerCase()) < 0) return '';
-      var avanzado = x.unidades_origen || x.diag_ids || x.reglas_ids || x.origen || x.consumo_fuente || x.rpm_modo;
+      var avanzado = unidadConAvanzado(x);
       return '<tr data-i="' + i + '"><td><input type="checkbox" class="u_sel"></td><td><input class="f_placa" size="9" value="' + esc(x.placa) + '"></td><td class="peq">' + esc(x.nombre_geotab) + '</td>' +
         '<td>' + selectPerfilFila(x) + '</td>' +
         '<td><select class="f_comb"><option value=""></option><option' + (x.combustible === 'DIESEL' ? ' selected' : '') + '>DIESEL</option><option' + (x.combustible === 'GAS' ? ' selected' : '') + '>GAS</option><option' + (x.combustible === 'ELECTRICO' ? ' selected' : '') + '>ELECTRICO</option></select>' + etiquetaMedicion(x) + '</td>' +
         '<td><select class="f_est">' + ['ACTIVO', 'PENDIENTE', 'INACTIVO'].map(function (e) { return '<option' + (e === x.estado ? ' selected' : '') + '>' + e + '</option>'; }).join('') + '</select></td>' +
         '<td><input class="f_rmax" size="4" value="' + esc(x.rend_max) + '"></td><td><input class="f_rmin" size="4" value="' + esc(x.rend_min) + '"></td>' +
-        '<td style="white-space:nowrap"><button class="btn chico ' + (avanzado ? '' : 'sec') + '" style="white-space:nowrap" data-act="uAvanzado" data-i="' + i + '">' + (avanzado ? 'Avanzado ●' : 'Avanzado') + '</button></td></tr>';
+        '<td style="white-space:nowrap"><button class="btn chico ' + (avanzado ? '' : 'sec') + '" style="white-space:nowrap" data-act="uAvanzado" data-i="' + i + '">' + (avanzado ? 'Avanzado ●' : 'Avanzado') + '</button> <button class="btn chico sec" data-act="uRetirar" data-i="' + i + '" title="Retirar de la lista" aria-label="Retirar de la lista">✕</button></td></tr>';
     }).join('') + '</tbody></table></div><div class="pie-modal"><button class="btn sec" data-act="cerrar">Cerrar</button><button class="btn verde" id="u_gua">Guardar cambios</button></div>';
   if (!nuevo) cerrarModal();
   var m = abrirModal(h, 'ancho');
   m.dataset.fijo = '1';
   m.querySelector('#u_txt').oninput = function () { leerUnidadesPantalla(m); uCtx.texto = this.value; var pos = this.value.length; pintarUnidades(false); var t = document.getElementById('u_txt'); t.focus(); t.setSelectionRange(pos, pos); };
   m.querySelector('#u_todos').onchange = function (e) { m.querySelectorAll('.u_sel').forEach(function (c) { c.checked = e.target.checked; }); };
-  m.querySelector('#u_act').onclick = conRuedaFn(async function () {
-    leerUnidadesPantalla(m);
-    var r = await ejecutar(function () { return api('unidades_actualizar', { cliente_id: uCtx.id }, uCtx.clave); }); if (!r) return;
-    uCtx.unidades = r.unidades; toast(r.nuevas + ' nuevas · ' + r.inactivadas + ' inactivadas · ' + r.reactivadas + ' reactivadas', 'ok'); pintarUnidades(false);
-    if (r.excede) avisoLimite(r.mensaje);
-  });
+  m.querySelector('#u_act').onclick = function () { leerUnidadesPantalla(m); elegirTraerUnidades(); };
   var uRm = m.querySelector('#u_rm'), uRl = m.querySelector('#u_rl');
   uRm.onchange = function () {   // segunda lista según el modo: perfiles de motor (por regla) o rangos propios guardados (manual)
     var pgR = rpmGuardadosPantalla(), v = uRm.value;
@@ -580,6 +578,35 @@ function pintarUnidades(nuevo) {
     var r = await ejecutar(function () { return api('unidades_guardar', { cliente_id: uCtx.id, unidades: uCtx.unidades }, uCtx.clave); }, 'Unidades guardadas. Si hay informes en curso de este cliente, usa «Traer todo de nuevo» para que tomen el cambio.');
     if (r) { uCtx.unidades = r; cerrarModal(); cargarClientes(); }
   });
+}
+/** Antes de traer las unidades: solo vehículos (con serial) o ambos (vehículos y remolques). */
+function elegirTraerUnidades() {
+  var retiradas = uCtx.unidades.filter(function (x) { return x.estado === 'RETIRADO'; }).length;
+  var d = abrirModal('<h3>Traer unidades desde MyGeotab</h3><p class="peq">¿Qué quieres traer? Los remolques son los dispositivos sin serial. Lo que ya está en tu lista no se toca.</p>' +
+    (retiradas ? '<label style="display:flex;gap:8px;align-items:center;margin:10px 0"><input type="checkbox" id="t_ret"> Traer también las ' + retiradas + ' que retiré</label>' : '') +
+    '<div class="pie-modal"><button class="btn sec" id="t_no">Cancelar</button><button class="btn" id="t_veh">Solo vehículos</button><button class="btn" id="t_amb">Ambos (vehículos y remolques)</button></div>', 'chico');
+  var ir = function (tipo) { var ret = !!(d.querySelector('#t_ret') && d.querySelector('#t_ret').checked); cerrarModal(); traerUnidades(tipo, ret); };
+  d.querySelector('#t_no').onclick = function () { cerrarModal(); };
+  d.querySelector('#t_veh').onclick = function () { ir('VEHICULOS'); };
+  d.querySelector('#t_amb').onclick = function () { ir('AMBOS'); };
+}
+async function traerUnidades(tipo, retiradas) {
+  var cerrar = cargandoModal('Consultando MyGeotab…'), r;
+  try { r = await ejecutar(function () { return api('unidades_actualizar', { cliente_id: uCtx.id, tipo: tipo, traer_retiradas: retiradas }, uCtx.clave); }); } finally { cerrar(); }
+  if (!r) return;
+  uCtx.unidades = r.unidades;
+  toast(r.nuevas + ' nuevas · ' + r.inactivadas + ' inactivadas · ' + r.reactivadas + ' reactivadas' + (r.remolques_omitidos ? ' · ' + r.remolques_omitidos + ' remolques no traídos' : ''), 'ok'); pintarUnidades(false);
+  if (r.excede) avisoLimite(r.mensaje);
+}
+/** Quita una unidad de la lista del cliente (con confirmación). No vuelve a aparecer al actualizar desde MyGeotab. */
+async function retirarUnidad(i) {
+  var x = uCtx.unidades[i]; if (!x) return;
+  if (!confirm('¿Retirar ' + (x.placa || x.nombre_geotab) + ' de la lista?\n\nNo vuelve a aparecer al actualizar desde MyGeotab (salvo que marques «Traer también las que retiré»). No afecta informes ya hechos.')) return;
+  var r = await ejecutar(function () { return api('unidad_retirar', { cliente_id: uCtx.id, id_geotab: x.id_geotab }, uCtx.clave); }, 'Retirada de la lista'); if (!r) return;
+  var m = pila[pila.length - 1];
+  if (m && m.querySelector('tr[data-i]')) leerUnidadesPantalla(m);   // primero se lee lo escrito en pantalla; después se marca la retirada (si no, la lectura la pisaría)
+  x.estado = 'RETIRADO';
+  if (m && m.querySelector('tr[data-i]')) pintarUnidades(false);
 }
 function avisoLimite(msg) {
   abrirModal('<h3>Supera el máximo de unidades por informe</h3><div class="msg aviso">' + esc(msg) + '</div><p class="peq">Las unidades ya quedaron en la lista como PENDIENTE. Inactiva las que no se vayan a informar y guarda. Con más de 20 unidades activas lo recomendable es trabajar este cliente con Power BI.</p><div class="pie-modal"><button class="btn" data-act="cerrar">Entendido</button></div>', 'chico');
@@ -662,6 +689,13 @@ function selectPerfilFila(x) {
   return '<select class="f_perfil" data-orig="' + esc(v) + '">' + o + '</select>';
 }
 function fijarSelect(sel, val) { if (sel && Array.prototype.some.call(sel.options, function (op) { return op.value === val; })) sel.value = val; }
+/** Azul en «Avanzado» solo si esa unidad tiene algo guardado que se sale de lo normal (ids, unidades, reglas propias, GPS, consumo alterno o sin consumo).
+    Lo vacío, «{}» o los valores de siempre (ECM, principal, reglas) no cuentan; el RPM sin/propio ya se ve en el cuadro Perfil. */
+function unidadConAvanzado(x) {
+  var conClaves = function (t) { if (!t) return false; try { var o = typeof t === 'string' ? JSON.parse(t) : t; return !!o && Object.keys(o).length > 0; } catch (e) { return !!String(t).trim(); } };
+  var origen = String(x.origen || '').toUpperCase().trim(), cons = String(x.consumo_fuente || '').toUpperCase().trim();
+  return conClaves(x.reglas_ids) || conClaves(x.diag_ids) || conClaves(x.unidades_origen) || (origen !== '' && origen !== 'ECM') || (cons !== '' && cons !== 'PRINCIPAL');
+}
 function unidadAvanzada(i) {
   var x = uCtx.unidades[i];
   var ro, dg, uo;
@@ -831,13 +865,14 @@ async function vistaEmisiones() {
   filtro.mes = mesLima();   // al entrar siempre aparece el mes de hoy
   $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="fila"><select id="fMes" title="Mes del periodo del informe" style="width:auto"></select><div class="filtros" id="filtros"></div></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista">' + pantallaCarga('Cargando emisiones…') + '</div>';
   await cargarEmisiones();
+  if (seccion !== 'emisiones') return;
   temporizador = setInterval(function () { if (!pila.length && !enVuelo) cargarEmisiones(true); }, 8000);
 }
 async function cargarEmisiones(silencioso) {
   try {
     var todas = await api('emisiones_listar', { q: filtro.q });
     listaEmi = todas;
-    if (!$('lista')) return;
+    if (seccion !== 'emisiones' || !$('lista') || !$('filtros')) return;   // otra pantalla también usa «lista»
     var meses = {}; meses[mesLima()] = 1; todas.forEach(function (e) { var k = mesDe(e); if (k) meses[k] = 1; });
     var listaMeses = Object.keys(meses).sort().reverse();
     if (filtro.mes && filtro.mes !== 'TODOS' && !meses[filtro.mes]) listaMeses.unshift(filtro.mes);
@@ -1041,7 +1076,8 @@ function bajarBase64(nombre, b64) {
 async function vistaManual() {
   manPlacas = {};
   $('app').innerHTML = pantallaCarga('Cargando…');
-  var cls; try { cls = (await api('clientes_listar')).filter(function (c) { return c.estado === 'ACTIVO'; }); } catch (e) { $('app').innerHTML = '<div class="msg mal">' + esc(e.message) + '</div>'; return; }
+  var cls; try { cls = (await api('clientes_listar')).filter(function (c) { return c.estado === 'ACTIVO'; }); } catch (e) { if (seccion === 'manual') $('app').innerHTML = '<div class="msg mal">' + esc(e.message) + '</div>'; return; }
+  if (seccion !== 'manual') return;
   var ayer = ayerLima();
   $('app').innerHTML = '<div class="tarjeta"><h3 style="margin-top:0">Informe manual</h3>' +
     '<p class="peq">Saca el PDF de unas fechas específicas (máximo 31 días) con lo que ya está configurado. No se envía por correo y no se guarda: lo descargas y el sistema lo borra.</p>' +
@@ -1071,6 +1107,7 @@ async function vistaManual() {
     $('man_pl').innerHTML = lista.length ? '<div class="fila" style="flex-wrap:wrap;gap:6px 14px">' + lista.map(function (u) { return '<label class="fila" style="gap:6px;cursor:pointer"><input type="checkbox" class="man_p" data-p="' + esc(u.placa) + '" style="width:auto"> ' + esc(u.placa) + '</label>'; }).join('') + '</div>' : '<div class="peq">Este cliente no tiene unidades activas.</div>';
   };
   await cargarManual();
+  if (seccion !== 'manual') return;
   temporizador = setInterval(function () { if (!pila.length && !tareaActual && !enVuelo) cargarManual(true); }, 5000);
 }
 async function cargarManual(silencioso) {
@@ -1109,6 +1146,7 @@ async function vistaCredenciales() {
   adminClave = clave;
   $('app').innerHTML = '<div class="fila" style="margin-bottom:14px"><button class="btn ambar" data-act="formBase">' + ic('plus') + ' Nueva base</button><span class="peq">Las credenciales se guardan sin cifrar en la hoja BASES. No compartas ese Sheet.</span></div><div id="lista">' + pantallaCarga('Cargando credenciales…') + '</div>';
   var l = await ejecutar(function () { return api('admin_bases_listar', {}, adminClave); });
+  if (seccion !== 'credenciales') return;
   if (!l) { adminClave = null; ir('clientes'); return; }
   cache.basesAdm = l; renderBases(l);
 }
@@ -1146,6 +1184,7 @@ async function vistaReglas(conservarClave) {
   var rg = await ejecutar(function () { return api('reglas_listar'); });
   var pf = await ejecutar(function () { return api('perfiles_listar'); });
   var dg = await ejecutar(function () { return api('diagnosticos_listar'); });
+  if (seccion !== 'reglas') return;
   if (!rg || !pf || !dg) { adminClave = null; ir('clientes'); return; }
   cache.reglas = rg; cache.perfiles = pf;
   var cfgR = await ejecutar(function () { return api('config_get'); }); window.__cfgRpm = (cfgR && cfgR.RPM_PERFILES) || '{}';
@@ -1236,7 +1275,9 @@ async function vistaConfig() {
   if (clave === null) { ir('clientes'); return; }
   adminClave = clave;
   $('app').innerHTML = pantallaCarga('Cargando configuración…');
-  var c = await ejecutar(function () { return api('config_get'); }); if (!c) { adminClave = null; ir('clientes'); return; }
+  var c = await ejecutar(function () { return api('config_get'); });
+  if (seccion !== 'config') return;
+  if (!c) { adminClave = null; ir('clientes'); return; }
   $('app').innerHTML = '<div class="tarjeta"><h2>Cortes y horario</h2><div class="cols">' +
     '<div><label>Día del informe QUINCENAL (1 al 15 del mes)</label><input id="k_dq" type="number" min="1" max="28" value="' + esc(c.DIA_QUINCENAL) + '"></div>' +
     '<div><label>Día del informe MENSUAL (mes anterior completo)</label><input id="k_dm" type="number" min="1" max="28" value="' + esc(c.DIA_MENSUAL) + '"></div>' +
@@ -1362,6 +1403,7 @@ var ACT = {
   unidades: function (d) { return abrirUnidades(d.id); },
   emiManual: function (d) { return emisionManual(d.id, d.n); },
   uFiltro: function (d) { var m = pila[pila.length - 1]; leerUnidadesPantalla(m); uCtx.filtro = d.f; pintarUnidades(false); },
+  uRetirar: function (d) { var mm = pila[pila.length - 1]; if (mm && mm.querySelector('tr[data-i]')) leerUnidadesPantalla(mm); return retirarUnidad(Number(d.i)); },
   uAvanzado: function (d) {
     var mm = pila[pila.length - 1];   // lo marcado en la fila (perfil, energía, RPM) pasa a Avanzado aunque aún no se haya guardado
     if (mm && mm.querySelector('tr[data-i]')) leerUnidadesPantalla(mm);
