@@ -248,7 +248,12 @@ function estadoVivo(ok) {
   conexionOk = ok; $('vivo').className = 'vivo' + (ok ? '' : ' caido');
   $('vivoT').textContent = ok ? 'En línea · ' + new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) : 'Sin conexión con el servidor';
 }
+var enVuelo = 0;   // consultas en curso: las consultas automáticas esperan para no hacer cola detrás de lo que pulsaste
 async function api(accion, datos, clave) {
+  enVuelo++;
+  try { return await apiBase(accion, datos, clave); } finally { enVuelo--; }
+}
+async function apiBase(accion, datos, clave) {
   if (!URL_API || URL_API.indexOf('PEGA_AQUI') === 0) throw new Error('Falta pegar la URL /exec en la constante URL_API al inicio del archivo HTML.');
   var cuerpo = Object.assign({ accion: accion }, datos || {});
   if (clave !== undefined && clave !== null) cuerpo.clave = clave;
@@ -401,7 +406,7 @@ var vistaTarjetas = leerLocal('vista') !== 'tabla', listaClientes = [];
 async function vistaClientes() {
   $('app').innerHTML = '<div class="kpis" id="kpis"></div><div id="curso"></div><div class="fila sep" style="margin-bottom:14px"><div class="fila"><button class="btn ambar" data-act="nuevoCliente">' + ic('plus') + ' Nuevo cliente</button></div><div class="filtros" id="vt"><button data-act="vista" data-v="t" class="' + (vistaTarjetas ? 'act' : '') + '">Tarjetas</button><button data-act="vista" data-v="l" class="' + (vistaTarjetas ? '' : 'act') + '">Lista</button></div></div><div id="lista">' + pantallaCarga('Cargando clientes…') + '</div>';
   await cargarClientes();
-  temporizador = setInterval(function () { if (!pila.length) { cargarKpis(); } }, 8000);
+  temporizador = setInterval(function () { if (!pila.length && !enVuelo) { cargarKpis(); } }, 8000);
 }
 async function cargarKpis() {
   try {
@@ -826,7 +831,7 @@ async function vistaEmisiones() {
   filtro.mes = mesLima();   // al entrar siempre aparece el mes de hoy
   $('app').innerHTML = '<div class="fila sep" style="margin-bottom:14px"><div class="fila"><select id="fMes" title="Mes del periodo del informe" style="width:auto"></select><div class="filtros" id="filtros"></div></div><button class="btn" data-act="actualizar">Actualizar</button></div><div id="lista">' + pantallaCarga('Cargando emisiones…') + '</div>';
   await cargarEmisiones();
-  temporizador = setInterval(function () { if (!pila.length) cargarEmisiones(true); }, 6000);
+  temporizador = setInterval(function () { if (!pila.length && !enVuelo) cargarEmisiones(true); }, 8000);
 }
 async function cargarEmisiones(silencioso) {
   try {
@@ -873,7 +878,13 @@ async function detalleEmision(id) {
   }
   detalleEmision.repintar = function () { return pintar(true); };
   await pintar(true);
-  emTimer = setInterval(function () { pintar(false); refrescarAvisos(); }, 4000);
+  var tic = 0;   // en proceso se refresca cada 4 s; con la emisión quieta, cada 12 s (y la campana cada 16 s)
+  emTimer = setInterval(function () {
+    tic++; if (enVuelo) return;
+    var est = window.__det && window.__det.emision ? window.__det.emision.estado : '';
+    if (est === 'EN_COLA' || est === 'EXTRAYENDO' || est === 'ENVIANDO' || tic % 3 === 0) pintar(false);
+    if (tic % 4 === 0) refrescarAvisos();
+  }, 4000);
   new MutationObserver(function (_, o) { if (!document.body.contains(m)) { clearInterval(emTimer); o.disconnect(); } }).observe($('modales'), { childList: true });
 }
 function htmlDetalle(d) {
@@ -1060,7 +1071,7 @@ async function vistaManual() {
     $('man_pl').innerHTML = lista.length ? '<div class="fila" style="flex-wrap:wrap;gap:6px 14px">' + lista.map(function (u) { return '<label class="fila" style="gap:6px;cursor:pointer"><input type="checkbox" class="man_p" data-p="' + esc(u.placa) + '" style="width:auto"> ' + esc(u.placa) + '</label>'; }).join('') + '</div>' : '<div class="peq">Este cliente no tiene unidades activas.</div>';
   };
   await cargarManual();
-  temporizador = setInterval(function () { if (!pila.length && !tareaActual) cargarManual(true); }, 5000);
+  temporizador = setInterval(function () { if (!pila.length && !tareaActual && !enVuelo) cargarManual(true); }, 5000);
 }
 async function cargarManual(silencioso) {
   try {
@@ -1472,7 +1483,7 @@ document.addEventListener('keydown', function (e) {
 
 /* ---------- arranque ---------- */
 pintarNav(); ir('clientes'); refrescarAvisos();
-setInterval(refrescarAvisos, 20000);
+setInterval(function () { if (!enVuelo) refrescarAvisos(); }, 30000);
 </script>
 </body>
 </html>
