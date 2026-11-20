@@ -382,9 +382,13 @@ function ir(s) {
 }
 
 /* ---------- avisos (campana) ---------- */
+var avisosAtendidos = {};
+function claveAviso(a) { return [a.cliente_id, a.crear && a.crear.tipo, a.crear && a.crear.anio, a.crear && a.crear.mes, a.crear && a.crear.desde].join('|'); }
 async function refrescarAvisos() {
   try {
     avisosCache = await api('avisos_listar');
+    var ahora = Date.now();   // los avisos que acabas de atender no reaparecen mientras la lista del servidor se pone al día
+    avisosCache = avisosCache.filter(function (x) { var t = x.tipo === 'SIN_EMISION' ? avisosAtendidos[claveAviso(x)] : 0; return !(t && ahora - t < 90000); });
   } catch (e) { return; }
   var p = $('punto'); p.style.display = avisosCache.length ? 'block' : 'none'; p.textContent = avisosCache.length;
   $('campana').classList.toggle('tiene', avisosCache.length > 0);
@@ -1456,7 +1460,22 @@ var ACT = {
   enviar: async function (d) { if (!confirm('¿Enviar el informe a ' + d.n + '? Esta acción no se puede repetir.')) return; var r = await ejecutar(function () { return api('emision_enviar', { id: d.id }); }); repintarDetalle(); if (r) toast('Informe enviado ✔', 'ok'); },
   envioSi: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: true }); }, 'Confirmado: queda como ENVIADO'); if (r) { repintarDetalle(); } },
   envioNo: async function (d) { var r = await ejecutar(function () { return api('envio_resolver', { id: d.id, enviado: false }); }, 'Vuelve a LISTO para enviarlo de nuevo'); if (r) { repintarDetalle(); } },
-  crearAviso: async function (d) { var a = avisosCache[Number(d.i)]; var r = await ejecutar(function () { return api('emision_crear', { cliente_id: a.cliente_id, tipo: a.crear.tipo, anio: a.crear.anio, mes: a.crear.mes, desde: a.crear.desde || undefined, auto: d.auto === '1' }); }); if (r) { toast(r.mensaje, 'ok'); refrescarAvisos(); } },
+  crearAviso: async function (d) {
+    var a = avisosCache[Number(d.i)]; if (!a) return;
+    var botones = [].slice.call(document.querySelectorAll('[data-act="crearAviso"][data-i="' + d.i + '"]'));
+    if (botones.some(function (b) { return b.dataset.ocupado === '1'; })) return;   // ya se está creando: un segundo clic no hace nada
+    botones.forEach(function (b) { b.dataset.ocupado = '1'; b.disabled = true; });
+    var r = await ejecutar(function () { return api('emision_crear', { cliente_id: a.cliente_id, tipo: a.crear.tipo, anio: a.crear.anio, mes: a.crear.mes, desde: a.crear.desde || undefined, auto: d.auto === '1' }); });
+    if (r) {
+      toast(r.mensaje, 'ok');
+      avisosAtendidos[claveAviso(a)] = Date.now();
+      avisosCache = avisosCache.filter(function (x) { return x !== a; });   // el aviso se va de inmediato; la recarga confirma por detrás
+      var p = $('punto'); p.style.display = avisosCache.length ? 'block' : 'none'; p.textContent = avisosCache.length;
+      $('campana').classList.toggle('tiene', avisosCache.length > 0); pintarNav();
+      if ($('cajon').classList.contains('abierto')) pintarAvisos();
+      refrescarAvisos();
+    } else botones.forEach(function (b) { if (b.isConnected) { b.dataset.ocupado = ''; b.disabled = false; } });
+  },
   generarConLoQueHay: async function (d) {
     var marcadas = Array.prototype.map.call(document.querySelectorAll('.chk-ign:checked'), function (x) { return x.dataset.p; });
     if (!marcadas.length) { alerta('Marca «Ignorar (sin operación)» en las unidades que no tuvieron operación, o corrige sus datos.'); return; }
