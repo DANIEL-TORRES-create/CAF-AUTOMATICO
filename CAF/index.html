@@ -655,6 +655,7 @@ async function revisarVariablesUnidad(x) {
 function etiquetaMedicion(x) {
   var t = [], elec = String(x.combustible).toUpperCase() === 'ELECTRICO';
   if (x.origen === 'GPS') t.push('Distancia GPS'); else if (x.origen === 'GPSKM') t.push('Km por GPS');
+  if (elec && String(x.tiempos_fuente || '').toUpperCase() === 'ECM') t.push('Tiempos por ECM');
   if (!elec) { if (x.consumo_fuente === 'ALTERNA') t.push('Consumo alterno'); else if (x.consumo_fuente === 'SIN') t.push('Sin consumo'); }
   return t.length ? '<div class="peq" style="margin-top:4px;font-size:11px;color:var(--suave)">' + esc(t.join(' · ')) + '</div>' : '';
 }
@@ -694,7 +695,7 @@ function fijarSelect(sel, val) { if (sel && Array.prototype.some.call(sel.option
 function unidadConAvanzado(x) {
   var conClaves = function (t) { if (!t) return false; try { var o = typeof t === 'string' ? JSON.parse(t) : t; return !!o && Object.keys(o).length > 0; } catch (e) { return !!String(t).trim(); } };
   var origen = String(x.origen || '').toUpperCase().trim(), cons = String(x.consumo_fuente || '').toUpperCase().trim();
-  return conClaves(x.reglas_ids) || conClaves(x.diag_ids) || conClaves(x.unidades_origen) || (origen !== '' && origen !== 'ECM') || (cons !== '' && cons !== 'PRINCIPAL');
+  return conClaves(x.reglas_ids) || conClaves(x.diag_ids) || conClaves(x.unidades_origen) || (origen !== '' && origen !== 'ECM') || (cons !== '' && cons !== 'PRINCIPAL') || (String(x.combustible).toUpperCase() === 'ELECTRICO' && String(x.tiempos_fuente || '').toUpperCase() === 'ECM');
 }
 function unidadAvanzada(i) {
   var x = uCtx.unidades[i];
@@ -711,8 +712,8 @@ function unidadAvanzada(i) {
   var dgf = {}; uCtx.diag.forEach(function (d) { dgf[d.clave] = d; });
   var h = '<h3>Configuración avanzada · ' + esc(x.placa) + '</h3><p class="peq">Solo para esta unidad. «Según perfil / por defecto» = usa lo definido en Reglas. Perfil actual: <b>' + esc(x.perfil || 'sin perfil') + '</b> · Energía: <b>' + esc(x.combustible || '—') + '</b>.</p>' +
     '<div class="sec-t" style="margin-top:14px">Cómo se mide esta unidad <span class="peq">(vacío = lo de siempre)</span></div><div class="cols">' +
-    '<div><label>Distancia y horas desde</label>' + sel('m_origen', x.origen === 'ECM' ? '' : (x.origen || ''), [['', 'ECM del motor (lo de siempre)'], ['GPSKM', 'ECM, con kilometraje por GPS (unidad sin odómetro)'], ['GPS', 'GPS completo (distancia y horas)']]) + '</div>' +
-    (elec ? '<div><label>Consumo</label><div class="peq" style="padding:8px 0">Eléctrico: movimiento + ralentí − regenerada (kWh).</div></div>' :
+    '<div><label>' + (elec ? 'Distancia desde' : 'Distancia y horas desde') + '</label>' + sel('m_origen', x.origen === 'ECM' ? '' : (x.origen || ''), (elec ? [['', 'ECM (odómetro del vehículo)'], ['GPSKM', 'ECM, con kilometraje por GPS (unidad sin odómetro)'], ['GPS', 'GPS (distancia y tiempos)']] : [['', 'ECM del motor (lo de siempre)'], ['GPSKM', 'ECM, con kilometraje por GPS (unidad sin odómetro)'], ['GPS', 'GPS completo (distancia y horas)']])) + '</div>' +
+    (elec ? '<div><label>Tiempos desde (movimiento + ralentí)</label>' + sel('m_tiempos', String(x.tiempos_fuente || '').toUpperCase() === 'ECM' ? 'ECM' : '', [['', 'GPS (lo normal en eléctricos)'], ['ECM', 'ECM (horas de motor y ralentí)']]) + '<div class="peq" style="margin-top:4px">Con GPS completo en «Distancia desde», los tiempos también salen del GPS.</div></div><div><label>Consumo</label><div class="peq" style="padding:8px 0">Eléctrico: movimiento + ralentí − regenerada (kWh).</div></div>' :
       '<div><label>Consumo de combustible</label>' + sel('m_cons', x.consumo_fuente === 'PRINCIPAL' ? '' : (x.consumo_fuente || ''), [['', 'Principal ECM (lo de siempre)'], ['ALTERNA', 'Variable alterna del dispositivo'], ['SIN', 'Sin consumo (guion, no retiene)']]) + '</div>' +
       '<div><label>RPM</label>' + sel('m_rpm', x.rpm_modo === 'REGLAS' ? '' : (x.rpm_modo || ''), [['', 'Reglas del perfil de motor (lo de siempre)'], ['SIN', 'Sin RPM (guion, no retiene)'], ['RANGOS', 'Rangos propios']]) + '</div>') + '</div>' +
     '<div id="m_avgps" class="msg info" style="display:none;margin-top:8px">El GPS no entrega consumo. Si la ECM de esta unidad tampoco lo tiene, elige <b>Variable alterna</b> o <b>Sin consumo</b>.</div>' +
@@ -723,6 +724,7 @@ function unidadAvanzada(i) {
     '<div class="fila" style="margin-top:10px"><button class="btn chico sec" id="m_rev">Revisar variables de esta unidad (7 días)</button><span class="peq">Solo lectura.</span></div>' +
     '<div class="sec-t" style="margin-top:14px">Reglas de MyGeotab (todas)</div><div class="cols">' +
     uCtx.roles.map(function (r) {
+      if (elec && ROLES_RPM_AV[r]) return '';   // los eléctricos no tienen RPM (lo guardado no se borra)
       var porPerfil = perfil[r] ? (nombreRegla[perfil[r]] || perfil[r]) : 'ninguna';
       return '<div class="' + (ROLES_RPM_AV[r] ? 'rol-rpm' : '') + '"><label>' + esc(ROL_TXT[r] || r) + '</label><select data-rol="' + esc(r) + '"><option value="">Según perfil: ' + esc(porPerfil) + '</option>' +
         uCtx.reglas.map(function (g) { return '<option value="' + esc(g.id_regla) + '"' + (ro[r] === g.id_regla ? ' selected' : '') + '>' + esc(g.nombre) + ' · ' + esc(g.categoria) + '</option>'; }).join('') + '</select></div>';
@@ -749,6 +751,7 @@ function unidadAvanzada(i) {
   m.querySelector('#o_reset').onclick = function () { m.querySelectorAll('select').forEach(function (s) { s.value = ''; }); m.querySelectorAll('.v_id').forEach(function (s) { s.value = ''; }); var rr2 = m.querySelector('#m_rangos'); if (rr2) rr2.style.display = 'none'; toast('Restablecido. Pulsa «Aceptar».'); };
   m.querySelector('#o_ok').onclick = conRuedaFn(async function () {
     var r = {}, d = {}, u = {};
+    if (elec) Object.keys(ro).forEach(function (k) { if (ROLES_RPM_AV[k] && ro[k]) r[k] = ro[k]; });   // reglas de RPM guardadas: se conservan aunque no se muestren
     m.querySelectorAll('select[data-rol]').forEach(function (sel) { if (sel.closest('.rol-rpm') && sel.closest('.rol-rpm').style.display === 'none') return; if (sel.value) r[sel.getAttribute('data-rol')] = sel.value; });
     m.querySelectorAll('tr[data-var]').forEach(function (tr) {
       var k = tr.getAttribute('data-var'), id = tr.querySelector('.v_id').value.trim(), un = tr.querySelector('.v_un').value;
@@ -766,7 +769,7 @@ function unidadAvanzada(i) {
       }
       x.rpm_rangos = JSON.stringify(Object.assign({}, rg, { nombre: nomR }));
     }
-    x.origen = vo('m_origen'); if (!elec) { x.consumo_fuente = vo('m_cons'); x.rpm_modo = modo; }
+    x.origen = vo('m_origen'); if (elec) x.tiempos_fuente = vo('m_tiempos'); if (!elec) { x.consumo_fuente = vo('m_cons'); x.rpm_modo = modo; }
     x.reglas_ids = Object.keys(r).length ? JSON.stringify(r) : '';
     x.diag_ids = Object.keys(d).length ? JSON.stringify(d) : '';
     x.unidades_origen = Object.keys(u).length ? JSON.stringify(u) : '';
